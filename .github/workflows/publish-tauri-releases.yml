@@ -55,17 +55,18 @@ jobs:
           # - libasound2-dev: Audio support
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libxdo-dev libasound2-dev
 
-      # Setup Bun package manager
-      - name: setup bun
-        uses: oven-sh/setup-bun@v2
+      # Setup pnpm package manager
+      - name: setup pnpm
+        uses: pnpm/action-setup@v4
         with:
-          bun-version: latest
+          version: 9
 
-      # Setup Node.js for compatibility
+      # Setup Node.js with pnpm caching
       - name: setup node
         uses: actions/setup-node@v4
         with:
           node-version: lts/*  # Use latest LTS version
+          cache: 'pnpm'
 
       # Install Rust toolchain required for building Tauri
       - name: install Rust stable
@@ -84,11 +85,11 @@ jobs:
 
       # Install all JavaScript dependencies
       - name: install frontend dependencies
-        run: bun install
+        run: pnpm install
 
       # Build the frontend (SvelteKit app) before Tauri packaging
       - name: Build frontend
-        run: bun --filter @repo/app build  # Targets the specific workspace package
+        run: pnpm --filter @repo/app build  # Targets the specific workspace package
 
       # Read and process release notes from the release-notes directory
       - name: Process release notes
