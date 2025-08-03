@@ -20,7 +20,7 @@
 			{getUserInitials()}
 		</Chat.BubbleAvatarFallback>
 	</Chat.BubbleAvatar>
-	<Chat.BubbleMessage class="flex flex-col gap-1 prose prose-invert">
+	<Chat.BubbleMessage class="flex flex-col gap-1 prose">
 		{#each parts as part}
 			<MessagePartRenderer {part} />
 		{/each}
