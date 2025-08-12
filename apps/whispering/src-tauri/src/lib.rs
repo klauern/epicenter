@@ -21,7 +21,7 @@ pub async fn run() {
     let mut builder = tauri::Builder::default();
     
     // Try to get APTABASE_KEY from environment, use empty string if not found
-    let aptabase_key = option_env!("APTABASE_KEY").unwrap_or("");
+    let aptabase_key = option_env!("APTABASE_KEY").unwrap_or("A-US-5744332458");
     
     // Only add Aptabase plugin if key is not empty
     if !aptabase_key.is_empty() {
