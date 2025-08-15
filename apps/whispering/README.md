@@ -53,7 +53,7 @@ Here’s an overview:
 
 and [here’s how I personally am using it with Claude Code these days](https://www.youtube.com/watch?v=tpix588SeiQ).
 
-There are plenty of transcription apps out there, each with their own strengths. Whispering has a few tricks up its sleeve, like a voice-activated mode for truly hands-free operation (no button holding), and customizable AI transformations with any prompt/model. The space is full of great ideas, but I just wanted to add some extra competition from the OSS ecosystem.
+There are plenty of transcription apps out there, each with their own strengths. Whispering has a few tricks up its sleeve, like a voice-activated mode for truly hands-free operation (no button holding), and customizable AI transformations with any prompt/model. We’ve still got a lot to build—right now we’re adding Whisper.cpp support and overhauling shortcut-recording logic—but I hope Whispering continues to push the boundaries and adds some extra competition from the OSS ecosystem.
 
 Built with Svelte 5 and Tauri, so it's tiny (~22MB) and starts instantly. The codebase is well-documented and designed to be understood and audited. That way, you know where your audio goes, how it's processed, and what data is stored. And finally, the cost savings. When you cut out the middleman, you pay providers directly:
 
