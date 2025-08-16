@@ -126,11 +126,7 @@ use tauri_plugin_clipboard_manager::ClipboardExt;
 #[tauri::command]
 async fn write_text(app: tauri::AppHandle, text: String) -> Result<(), String> {
     // 1. Save current clipboard content
-    let original_clipboard = app
-        .clipboard()
-        .read_text()
-        .unwrap_or_else(|_| None)
-        .unwrap_or_else(|| String::new());
+    let original_clipboard = app.clipboard().read_text().ok();
 
     // 2. Write new text to clipboard
     app.clipboard()
@@ -171,9 +167,9 @@ async fn write_text(app: tauri::AppHandle, text: String) -> Result<(), String> {
     tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
     // 4. Restore original clipboard content
-    if !original_clipboard.is_empty() {
+    if let Some(content) = original_clipboard {
         app.clipboard()
-            .write_text(&original_clipboard)
+            .write_text(&content)
             .map_err(|e| format!("Failed to restore clipboard: {}", e))?;
     }
 
