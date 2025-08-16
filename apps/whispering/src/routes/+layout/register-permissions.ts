@@ -1,15 +1,16 @@
 import { IS_MACOS } from '$lib/constants/platform';
 import * as services from '$lib/services';
+import { nanoid } from 'nanoid/non-secure';
 import { toast } from 'svelte-sonner';
 
-let accessibilityToastId: string | number | undefined;
+const accessibilityToastId = nanoid();
 
 export function registerAccessibilityPermission() {
 	// Only run on macOS desktop
 	if (!IS_MACOS) return;
 
-	// Check accessibility permission every second
-	const intervalId = setInterval(async () => {
+	// Check accessibility permission once on mount
+	(async () => {
 		const { data: isAccessibilityGranted, error } =
 			await services.permissions.accessibility.check();
 
@@ -19,8 +20,9 @@ export function registerAccessibilityPermission() {
 		}
 
 		if (!isAccessibilityGranted) {
-			// Toast if permission not granted and toast not already showing
-			accessibilityToastId ??= toast.info('Accessibility Permission Required', {
+			// Toast if permission not granted
+			toast.info('Accessibility Permission Required', {
+				id: accessibilityToastId,
 				description:
 					'Whispering needs accessibility permissions to capture system audio and simulate keyboard shortcuts',
 				duration: Number.POSITIVE_INFINITY,
@@ -36,35 +38,30 @@ export function registerAccessibilityPermission() {
 									'Please open System Settings > Privacy & Security > Accessibility manually',
 							});
 						}
+						// Dismiss the toast after requesting
+						toast.dismiss(accessibilityToastId);
 					},
 				},
 			});
-		} else {
-			// Dismiss toast if permission granted
-			toast.dismiss(accessibilityToastId);
-
-			// Stop checking once permission is granted
-			clearInterval(intervalId);
 		}
-	}, 1000);
+	})();
 
 	// Return cleanup function
 	return () => {
-		clearInterval(intervalId);
 		if (accessibilityToastId) {
 			toast.dismiss(accessibilityToastId);
 		}
 	};
 }
 
-let microphoneToastId: string | number | undefined;
+const microphoneToastId = nanoid();
 
 export function registerMicrophonePermission() {
 	// Only run on macOS desktop
 	if (!IS_MACOS) return;
 
-	// Check microphone permission every second
-	const intervalId = setInterval(async () => {
+	// Check microphone permission once on mount
+	(async () => {
 		const { data: isMicrophoneGranted, error } =
 			await services.permissions.microphone.check();
 
@@ -74,8 +71,9 @@ export function registerMicrophonePermission() {
 		}
 
 		if (!isMicrophoneGranted) {
-			// Toast if permission not granted and toast not already showing
-			microphoneToastId ??= toast.info('Microphone Permission Required', {
+			// Toast if permission not granted
+			toast.info('Microphone Permission Required', {
+				id: microphoneToastId,
 				description: 'Whispering needs microphone access to record audio',
 				duration: Number.POSITIVE_INFINITY,
 				action: {
@@ -89,21 +87,16 @@ export function registerMicrophonePermission() {
 								description: 'Please check your system settings',
 							});
 						}
+						// Dismiss the toast after requesting
+						toast.dismiss(microphoneToastId);
 					},
 				},
 			});
-		} else {
-			// Dismiss toast if permission granted
-			toast.dismiss(microphoneToastId);
-
-			// Stop checking once permission is granted
-			clearInterval(intervalId);
 		}
-	}, 1000);
+	})();
 
 	// Return cleanup function
 	return () => {
-		clearInterval(intervalId);
 		if (microphoneToastId) {
 			toast.dismiss(microphoneToastId);
 		}
