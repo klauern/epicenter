@@ -57,8 +57,8 @@
 	});
 
 	onDestroy(() => {
-		if (cleanupAccessibilityPermission) cleanupAccessibilityPermission();
-		if (cleanupMicrophonePermission) cleanupMicrophonePermission();
+		cleanupAccessibilityPermission?.();
+		cleanupMicrophonePermission?.();
 	});
 
 	if (window.__TAURI_INTERNALS__) {

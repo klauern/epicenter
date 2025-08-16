@@ -1,8 +1,9 @@
 import { IS_MACOS } from '$lib/constants/platform';
 import * as services from '$lib/services';
+import { nanoid } from 'nanoid';
 import { toast } from 'svelte-sonner';
 
-let accessibilityToastId: string | number | undefined;
+const accessibilityToastId = nanoid();
 
 export function registerAccessibilityPermission() {
 	// Only run on macOS desktop
@@ -20,7 +21,8 @@ export function registerAccessibilityPermission() {
 
 		if (!isAccessibilityGranted) {
 			// Toast if permission not granted and toast not already showing
-			accessibilityToastId ??= toast.info('Accessibility Permission Required', {
+			toast.info('Accessibility Permission Required', {
+				id: accessibilityToastId,
 				description:
 					'Whispering needs accessibility permissions to capture system audio and simulate keyboard shortcuts',
 				duration: Number.POSITIVE_INFINITY,
@@ -42,8 +44,6 @@ export function registerAccessibilityPermission() {
 		} else {
 			// Dismiss toast if permission granted
 			toast.dismiss(accessibilityToastId);
-			accessibilityToastId = undefined;
-			toast.success('Accessibility permissions granted!');
 
 			// Stop checking once permission is granted
 			clearInterval(intervalId);
@@ -53,14 +53,11 @@ export function registerAccessibilityPermission() {
 	// Return cleanup function
 	return () => {
 		clearInterval(intervalId);
-		if (accessibilityToastId) {
-			toast.dismiss(accessibilityToastId);
-			accessibilityToastId = undefined;
-		}
+		toast.dismiss(accessibilityToastId);
 	};
 }
 
-let microphoneToastId: string | number | undefined;
+const microphoneToastId = nanoid();
 
 export function registerMicrophonePermission() {
 	// Only run on macOS desktop
@@ -78,7 +75,8 @@ export function registerMicrophonePermission() {
 
 		if (!isMicrophoneGranted) {
 			// Toast if permission not granted and toast not already showing
-			microphoneToastId ??= toast.info('Microphone Permission Required', {
+			toast.info('Microphone Permission Required', {
+				id: microphoneToastId,
 				description: 'Whispering needs microphone access to record audio',
 				duration: Number.POSITIVE_INFINITY,
 				action: {
@@ -98,8 +96,6 @@ export function registerMicrophonePermission() {
 		} else {
 			// Dismiss toast if permission granted
 			toast.dismiss(microphoneToastId);
-			microphoneToastId = undefined;
-			toast.success('Microphone permissions granted!');
 
 			// Stop checking once permission is granted
 			clearInterval(intervalId);
@@ -109,9 +105,6 @@ export function registerMicrophonePermission() {
 	// Return cleanup function
 	return () => {
 		clearInterval(intervalId);
-		if (microphoneToastId) {
-			toast.dismiss(microphoneToastId);
-			microphoneToastId = undefined;
-		}
+		toast.dismiss(microphoneToastId);
 	};
 }
