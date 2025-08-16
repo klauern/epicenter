@@ -1,5 +1,4 @@
 import { AnalyticsServiceLive } from './analytics';
-import { ClipboardServiceLive } from './clipboard';
 import * as completions from './completion';
 import { DbServiceLive } from './db';
 import { DownloadServiceLive } from './download';
@@ -7,6 +6,7 @@ import { GlobalShortcutManagerLive } from './global-shortcut-manager';
 import { LocalShortcutManagerLive } from './local-shortcut-manager';
 import { NotificationServiceLive } from './notifications';
 import { OsServiceLive } from './os';
+import { PermissionsServiceLive } from './permissions';
 import {
 	NativeRecorderServiceLive,
 	BrowserRecorderServiceLive,
@@ -33,6 +33,7 @@ export {
 	NotificationServiceLive as notification,
 	NativeRecorderServiceLive as nativeRecorder,
 	BrowserRecorderServiceLive as browserRecorder,
+	PermissionsServiceLive as permissions,
 	ToastServiceLive as toast,
 	OsServiceLive as os,
 	PlaySoundServiceLive as sound,
