@@ -3,11 +3,11 @@ import * as services from '$lib/services';
 import { nanoid } from 'nanoid/non-secure';
 import { toast } from 'svelte-sonner';
 
-const accessibilityToastId = nanoid();
-
 export function registerAccessibilityPermission() {
 	// Only run on macOS desktop
 	if (!IS_MACOS) return;
+
+	const accessibilityToastId = nanoid();
 
 	// Check accessibility permission once on mount
 	(async () => {
@@ -48,17 +48,15 @@ export function registerAccessibilityPermission() {
 
 	// Return cleanup function
 	return () => {
-		if (accessibilityToastId) {
-			toast.dismiss(accessibilityToastId);
-		}
+		toast.dismiss(accessibilityToastId);
 	};
 }
-
-const microphoneToastId = nanoid();
 
 export function registerMicrophonePermission() {
 	// Only run on macOS desktop
 	if (!IS_MACOS) return;
+
+	const microphoneToastId = nanoid();
 
 	// Check microphone permission once on mount
 	(async () => {
@@ -97,8 +95,6 @@ export function registerMicrophonePermission() {
 
 	// Return cleanup function
 	return () => {
-		if (microphoneToastId) {
-			toast.dismiss(microphoneToastId);
-		}
+		toast.dismiss(microphoneToastId);
 	};
 }
