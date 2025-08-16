@@ -2,20 +2,20 @@ import type { MaybePromise, WhisperingError } from '$lib/result';
 import { createTaggedError } from 'wellcrafted/error';
 import type { Result } from 'wellcrafted/result';
 
-const { ClipboardServiceError, ClipboardServiceErr } = createTaggedError(
-	'ClipboardServiceError',
+const { TextServiceError, TextServiceErr } = createTaggedError(
+	'TextServiceError',
 );
-type ClipboardServiceError = ReturnType<typeof ClipboardServiceError>;
-export { ClipboardServiceErr, ClipboardServiceError };
+type TextServiceError = ReturnType<typeof TextServiceError>;
+export { TextServiceErr, TextServiceError };
 
-export type ClipboardService = {
+export type TextService = {
 	/**
 	 * Copies text to the system clipboard.
 	 * @param text The text to copy to the clipboard.
 	 */
 	copyToClipboard: (
 		text: string,
-	) => Promise<Result<void, ClipboardServiceError>>;
+	) => Promise<Result<void, TextServiceError>>;
 
 	/**
 	 * Writes the provided text at the current cursor position.
@@ -29,7 +29,7 @@ export type ClipboardService = {
 	 * 
 	 * @param text The text to write at the cursor position.
 	 */
-	writeText: (
+	writeToCursor: (
 		text: string,
-	) => MaybePromise<Result<void, ClipboardServiceError | WhisperingError>>;
+	) => MaybePromise<Result<void, TextServiceError | WhisperingError>>;
 };

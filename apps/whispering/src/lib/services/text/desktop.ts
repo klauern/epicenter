@@ -3,16 +3,16 @@ import { invoke } from '@tauri-apps/api/core';
 import { writeText } from '@tauri-apps/plugin-clipboard-manager';
 import { type } from '@tauri-apps/plugin-os';
 import { Err, Ok, tryAsync } from 'wellcrafted/result';
-import type { ClipboardService } from '.';
-import { ClipboardServiceErr } from './types';
+import type { TextService } from './types';
+import { TextServiceErr } from './types';
 
-export function createClipboardServiceDesktop(): ClipboardService {
+export function createTextServiceDesktop(): TextService {
 	return {
 		copyToClipboard: (text) =>
 			tryAsync({
 				try: () => writeText(text),
 				mapErr: (error) =>
-					ClipboardServiceErr({
+					TextServiceErr({
 						message:
 							'There was an error copying to the clipboard using the Tauri Clipboard Manager API. Please try again.',
 						context: { text },
@@ -20,12 +20,12 @@ export function createClipboardServiceDesktop(): ClipboardService {
 					}),
 			}),
 
-		writeText: async (text) => {
+		writeToCursor: async (text) => {
 			// Try to write text using the clipboard sandwich technique
-			const { error: pasteError } = await tryAsync({
+			const { error: writeError } = await tryAsync({
 				try: () => invoke<void>('write_text', { text }),
 				mapErr: (error) =>
-					ClipboardServiceErr({
+					TextServiceErr({
 						message:
 							'There was an error writing the text. Please try pasting manually with Cmd/Ctrl+V.',
 						context: { text },
@@ -34,11 +34,11 @@ export function createClipboardServiceDesktop(): ClipboardService {
 			});
 
 			// If write succeeded, we're done
-			if (!pasteError) return Ok(undefined);
+			if (!writeError) return Ok(undefined);
 
 			// On macOS, check accessibility permissions when write fails
 			const isMacos = type() === 'macos';
-			if (!isMacos) return Err(pasteError);
+			if (!isMacos) return Err(writeError);
 
 			// On macOS, check accessibility permissions
 			const {
@@ -50,7 +50,7 @@ export function createClipboardServiceDesktop(): ClipboardService {
 						askIfNotAllowed: false,
 					}),
 				mapErr: (error) =>
-					ClipboardServiceErr({
+					TextServiceErr({
 						message:
 							'There was an error checking if accessibility is enabled. Please try again.',
 						cause: error,
@@ -75,7 +75,7 @@ export function createClipboardServiceDesktop(): ClipboardService {
 			}
 
 			// If accessibility is enabled but write still failed, propagate original error
-			return Err(pasteError);
+			return Err(writeError);
 		},
 	};
 }
