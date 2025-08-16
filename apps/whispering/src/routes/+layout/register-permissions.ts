@@ -27,10 +27,10 @@ export function registerAccessibilityPermission() {
 				action: {
 					label: 'Enable Permission',
 					onClick: async () => {
-						const requestResult =
+						const { error: requestError } =
 							await services.permissions.accessibility.request();
 
-						if (requestResult.error) {
+						if (requestError) {
 							toast.error('Failed to open accessibility settings', {
 								description:
 									'Please open System Settings > Privacy & Security > Accessibility manually',
@@ -84,10 +84,10 @@ export function registerMicrophonePermission() {
 				action: {
 					label: 'Enable Permission',
 					onClick: async () => {
-						const requestResult =
+						const { error: requestError } =
 							await services.permissions.microphone.request();
 
-						if (requestResult.error) {
+						if (requestError) {
 							toast.error('Failed to request microphone permission', {
 								description: 'Please check your system settings',
 							});
