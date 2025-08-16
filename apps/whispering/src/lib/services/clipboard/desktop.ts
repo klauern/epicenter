@@ -20,22 +20,23 @@ export function createClipboardServiceDesktop(): ClipboardService {
 					}),
 			}),
 
-		pasteFromClipboard: async () => {
-			// Try to paste using keyboard shortcut
+		writeText: async (text) => {
+			// Try to write text using the clipboard sandwich technique
 			const { error: pasteError } = await tryAsync({
-				try: () => invoke<void>('paste'),
+				try: () => invoke<void>('write_text', { text }),
 				mapErr: (error) =>
 					ClipboardServiceErr({
 						message:
-							'There was an error simulating the paste keyboard shortcut. Please try pasting manually with Cmd/Ctrl+V.',
+							'There was an error writing the text. Please try pasting manually with Cmd/Ctrl+V.',
+						context: { text },
 						cause: error,
 					}),
 			});
 
-			// If paste succeeded, we're done
+			// If write succeeded, we're done
 			if (!pasteError) return Ok(undefined);
 
-			// On macOS, check accessibility permissions when paste fails
+			// On macOS, check accessibility permissions when write fails
 			const isMacos = type() === 'macos';
 			if (!isMacos) return Err(pasteError);
 
@@ -62,7 +63,7 @@ export function createClipboardServiceDesktop(): ClipboardService {
 			if (!isAccessibilityEnabled) {
 				return WhisperingWarningErr({
 					title:
-						'Please enable or re-enable accessibility to paste transcriptions!',
+						'Please enable or re-enable accessibility to write transcriptions!',
 					description:
 						'Accessibility must be enabled or re-enabled for Whispering after install or update. Follow the link below for instructions.',
 					action: {

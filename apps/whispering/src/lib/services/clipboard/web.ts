@@ -26,12 +26,14 @@ export function createClipboardServiceWeb(): ClipboardService {
 			return Ok(undefined);
 		},
 
-		pasteFromClipboard: async () => {
+		writeText: async (text) => {
 			// In web browsers, we cannot programmatically paste for security reasons
-			// The user must manually paste with Cmd/Ctrl+V
+			// We can copy the text to clipboard but the user must manually paste with Cmd/Ctrl+V
+			await navigator.clipboard.writeText(text);
 			return ClipboardServiceErr({
 				message:
-					'Automatic paste is not supported in web browsers for security reasons. Please paste manually using Cmd/Ctrl+V.',
+					'Text copied to clipboard. Automatic paste is not supported in web browsers for security reasons. Please paste manually using Cmd/Ctrl+V.',
+				context: { text },
 				cause: undefined,
 			});
 		},

@@ -18,17 +18,18 @@ export type ClipboardService = {
 	) => Promise<Result<void, ClipboardServiceError>>;
 
 	/**
-	 * Pastes text from the clipboard at the current cursor position.
-	 * Simulates the standard paste keyboard shortcut (Cmd+V on macOS, Ctrl+V elsewhere).
-	 *
-	 * **Note**: The clipboard must already contain the text you want to paste.
-	 * Call `copyToClipboard` first if needed.
-	 *
-	 * - Desktop: Simulates Cmd/Ctrl+V keyboard shortcut
-	 * - Web: Uses browser paste API or extension messaging
-	 * - Mobile: Triggers native paste action
+	 * Writes the provided text at the current cursor position.
+	 * Uses the clipboard sandwich technique to preserve the user's existing clipboard content.
+	 * 
+	 * This method:
+	 * 1. Saves the current clipboard
+	 * 2. Writes the text to clipboard
+	 * 3. Simulates paste (Cmd+V on macOS, Ctrl+V elsewhere)
+	 * 4. Restores the original clipboard
+	 * 
+	 * @param text The text to write at the cursor position.
 	 */
-	pasteFromClipboard: () => MaybePromise<
-		Result<void, ClipboardServiceError | WhisperingError>
-	>;
+	writeText: (
+		text: string,
+	) => MaybePromise<Result<void, ClipboardServiceError | WhisperingError>>;
 };

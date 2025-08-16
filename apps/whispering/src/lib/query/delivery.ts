@@ -135,7 +135,32 @@ export const delivery = {
 				return Ok(undefined);
 			}
 
-			// Try to copy to clipboard
+			if (settings.value['transcription.clipboard.pasteOnSuccess']) {
+				// Use the write_text command that preserves clipboard
+				const { error: pasteError } = await rpc.clipboard.writeText.execute({
+					text,
+				});
+				if (pasteError) {
+					// Fall back to just copying if paste failed
+					const { error: copyError } =
+						await rpc.clipboard.copyToClipboard.execute({
+							text,
+						});
+					if (copyError) {
+						warnAutoCopyFailed(copyError);
+						offerManualCopy();
+						return Ok(undefined);
+					}
+					warnPasteFailedButCopied(pasteError);
+					confirmTextInClipboard();
+					return Ok(undefined);
+				}
+				// Paste succeeded
+				confirmFullDelivery();
+				return Ok(undefined);
+			}
+
+			// User only wants copy, not paste
 			const { error: copyError } = await rpc.clipboard.copyToClipboard.execute({
 				text,
 			});
@@ -145,23 +170,7 @@ export const delivery = {
 				return Ok(undefined);
 			}
 
-			// If user doesn't want auto-paste, confirm copy only
-			if (!settings.value['transcription.clipboard.pasteOnSuccess']) {
-				confirmTextInClipboard();
-				return Ok(undefined);
-			}
-
-			// Try to paste at cursor
-			const { error: pasteError } =
-				await rpc.clipboard.pasteFromClipboard.execute(undefined);
-			if (pasteError) {
-				warnPasteFailedButCopied(pasteError);
-				confirmTextInClipboard();
-				return Ok(undefined);
-			}
-
-			// Everything succeeded
-			confirmFullDelivery();
+			confirmTextInClipboard();
 			return Ok(undefined);
 		},
 	}),
@@ -296,7 +305,32 @@ export const delivery = {
 				return Ok(undefined);
 			}
 
-			// Try to copy to clipboard
+			if (settings.value['transformation.clipboard.pasteOnSuccess']) {
+				// Use the write_text command that preserves clipboard
+				const { error: pasteError } = await rpc.clipboard.writeText.execute({
+					text,
+				});
+				if (pasteError) {
+					// Fall back to just copying if paste failed
+					const { error: copyError } =
+						await rpc.clipboard.copyToClipboard.execute({
+							text,
+						});
+					if (copyError) {
+						warnAutoCopyFailed(copyError);
+						offerManualCopy();
+						return Ok(undefined);
+					}
+					warnPasteFailedButCopied(pasteError);
+					confirmTextInClipboard();
+					return Ok(undefined);
+				}
+				// Paste succeeded
+				confirmFullDelivery();
+				return Ok(undefined);
+			}
+
+			// User only wants copy, not paste
 			const { error: copyError } = await rpc.clipboard.copyToClipboard.execute({
 				text,
 			});
@@ -306,23 +340,7 @@ export const delivery = {
 				return Ok(undefined);
 			}
 
-			// If user doesn't want auto-paste, confirm copy only
-			if (!settings.value['transformation.clipboard.pasteOnSuccess']) {
-				confirmTextInClipboard();
-				return Ok(undefined);
-			}
-
-			// Try to paste at cursor
-			const { error: pasteError } =
-				await rpc.clipboard.pasteFromClipboard.execute(undefined);
-			if (pasteError) {
-				warnPasteFailedButCopied(pasteError);
-				confirmTextInClipboard();
-				return Ok(undefined);
-			}
-
-			// Everything succeeded
-			confirmFullDelivery();
+			confirmTextInClipboard();
 			return Ok(undefined);
 		},
 	}),

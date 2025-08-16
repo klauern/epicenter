@@ -7,8 +7,15 @@ export const clipboard = {
 		resultMutationFn: ({ text }: { text: string }) =>
 			services.clipboard.copyToClipboard(text),
 	}),
-	pasteFromClipboard: defineMutation({
-		mutationKey: ['clipboard', 'pasteFromClipboard'],
-		resultMutationFn: async () => await services.clipboard.pasteFromClipboard(),
+	writeText: defineMutation({
+		mutationKey: ['clipboard', 'writeText'],
+		resultMutationFn: async ({ text }: { text: string }) => {
+			// writeText handles everything internally:
+			// 1. Saves current clipboard
+			// 2. Writes text to clipboard
+			// 3. Simulates paste
+			// 4. Restores original clipboard
+			return await services.clipboard.writeText(text);
+		},
 	}),
 };

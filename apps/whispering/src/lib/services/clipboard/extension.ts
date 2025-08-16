@@ -14,15 +14,13 @@ export function createClipboardServiceExtension(): ClipboardService {
 					}),
 			}),
 
-		pasteFromClipboard: () =>
+		writeText: (text) =>
 			tryAsync({
-				try: async () => {
-					const text = await navigator.clipboard.readText();
-					return writeTextToCursor(text);
-				},
+				try: async () => writeTextToCursor(text),
 				mapErr: (error) =>
 					ClipboardServiceErr({
-						message: 'Unable to paste from clipboard at cursor position',
+						message: 'Unable to write text at cursor position',
+						context: { text },
 						cause: error,
 					}),
 			}),
