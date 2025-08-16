@@ -1,9 +1,8 @@
 import { IS_MACOS } from '$lib/constants/platform';
 import * as services from '$lib/services';
-import { nanoid } from 'nanoid';
 import { toast } from 'svelte-sonner';
 
-const accessibilityToastId = nanoid();
+let accessibilityToastId: string | number | undefined;
 
 export function registerAccessibilityPermission() {
 	// Only run on macOS desktop
@@ -21,8 +20,7 @@ export function registerAccessibilityPermission() {
 
 		if (!isAccessibilityGranted) {
 			// Toast if permission not granted and toast not already showing
-			toast.info('Accessibility Permission Required', {
-				id: accessibilityToastId,
+			accessibilityToastId ??= toast.info('Accessibility Permission Required', {
 				description:
 					'Whispering needs accessibility permissions to capture system audio and simulate keyboard shortcuts',
 				duration: Number.POSITIVE_INFINITY,
@@ -53,11 +51,13 @@ export function registerAccessibilityPermission() {
 	// Return cleanup function
 	return () => {
 		clearInterval(intervalId);
-		toast.dismiss(accessibilityToastId);
+		if (accessibilityToastId) {
+			toast.dismiss(accessibilityToastId);
+		}
 	};
 }
 
-const microphoneToastId = nanoid();
+let microphoneToastId: string | number | undefined;
 
 export function registerMicrophonePermission() {
 	// Only run on macOS desktop
@@ -75,8 +75,7 @@ export function registerMicrophonePermission() {
 
 		if (!isMicrophoneGranted) {
 			// Toast if permission not granted and toast not already showing
-			toast.info('Microphone Permission Required', {
-				id: microphoneToastId,
+			microphoneToastId ??= toast.info('Microphone Permission Required', {
 				description: 'Whispering needs microphone access to record audio',
 				duration: Number.POSITIVE_INFINITY,
 				action: {
@@ -105,6 +104,8 @@ export function registerMicrophonePermission() {
 	// Return cleanup function
 	return () => {
 		clearInterval(intervalId);
-		toast.dismiss(microphoneToastId);
+		if (microphoneToastId) {
+			toast.dismiss(microphoneToastId);
+		}
 	};
 }
