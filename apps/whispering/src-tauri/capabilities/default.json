@@ -54,6 +54,7 @@
     "updater:default",
     "aptabase:allow-track-event",
     "macos-permissions:default",
+    "shell:default",
     {
       "identifier": "shell:allow-execute",
       "allow": [
