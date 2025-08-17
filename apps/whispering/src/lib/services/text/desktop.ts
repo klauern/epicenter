@@ -20,9 +20,8 @@ export function createTextServiceDesktop(): TextService {
 					}),
 			}),
 
-		writeToCursor: async (text) => {
-			// Try to write text using the clipboard sandwich technique
-			const { error: writeError } = await tryAsync({
+		writeToCursor: async (text) =>
+			tryAsync({
 				try: () => invoke<void>('write_text', { text }),
 				mapErr: (error) =>
 					TextServiceErr({
@@ -31,51 +30,6 @@ export function createTextServiceDesktop(): TextService {
 						context: { text },
 						cause: error,
 					}),
-			});
-
-			// If write succeeded, we're done
-			if (!writeError) return Ok(undefined);
-
-			// On macOS, check accessibility permissions when write fails
-			const isMacos = type() === 'macos';
-			if (!isMacos) return Err(writeError);
-
-			// On macOS, check accessibility permissions
-			const {
-				data: isAccessibilityEnabled,
-				error: isAccessibilityEnabledError,
-			} = await tryAsync({
-				try: () =>
-					invoke<boolean>('is_macos_accessibility_enabled', {
-						askIfNotAllowed: false,
-					}),
-				mapErr: (error) =>
-					TextServiceErr({
-						message:
-							'There was an error checking if accessibility is enabled. Please try again.',
-						cause: error,
-					}),
-			});
-
-			if (isAccessibilityEnabledError) return Err(isAccessibilityEnabledError);
-
-			// If accessibility is not enabled, return WhisperingWarning
-			if (!isAccessibilityEnabled) {
-				return WhisperingWarningErr({
-					title:
-						'Please enable or re-enable accessibility to write transcriptions!',
-					description:
-						'Accessibility must be enabled or re-enabled for Whispering after install or update. Follow the link below for instructions.',
-					action: {
-						type: 'link',
-						label: 'Open Directions',
-						href: '/macos-enable-accessibility',
-					},
-				});
-			}
-
-			// If accessibility is enabled but write still failed, propagate original error
-			return Err(writeError);
-		},
+			}),
 	};
 }

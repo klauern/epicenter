@@ -24,7 +24,7 @@ export function registerAccessibilityPermission() {
 			toast.info('Accessibility Permission Required', {
 				id: accessibilityToastId,
 				description:
-					'Whispering needs accessibility permissions to capture system audio and simulate keyboard shortcuts',
+					'Whispering needs accessibility permissions to write transcribed text to the cursor',
 				duration: Number.POSITIVE_INFINITY,
 				action: {
 					label: 'Enable Permission',
@@ -37,6 +37,20 @@ export function registerAccessibilityPermission() {
 								description:
 									'Please open System Settings > Privacy & Security > Accessibility manually',
 							});
+							// toast.info(
+							// 	'Please enable or re-enable accessibility to write transcriptions!',
+							// 	{
+							// 		description:
+							// 			'Accessibility must be enabled or re-enabled for Whispering after install or update. Follow the link below for instructions.',
+							// 		action: {
+							// 			label: 'Open Directions',
+							// 			onClick: () => {
+							// 				window.open('/macos-enable-accessibility', '_blank');
+							// 			},
+							// 		},
+							// 	},
+							// );
+							return;
 						}
 						// Dismiss the toast after requesting
 						toast.dismiss(accessibilityToastId);
@@ -84,6 +98,7 @@ export function registerMicrophonePermission() {
 							toast.error('Failed to request microphone permission', {
 								description: 'Please check your system settings',
 							});
+							return;
 						}
 						// Dismiss the toast after requesting
 						toast.dismiss(microphoneToastId);
