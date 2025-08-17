@@ -458,6 +458,211 @@
 				</label>
 			</div>
 		</div>
+	{:else if settings.value['transcription.selectedTranscriptionService'] === 'owhisper'}
+		<div class="space-y-4">
+			<Card.Root>
+				<Card.Header>
+					<Card.Title class="text-lg">Owhisper Setup</Card.Title>
+					<Card.Description>
+						Install Owhisper CLI and configure Whispering. Owhisper provides local,
+						private transcription with no API costs or data sharing.
+					</Card.Description>
+				</Card.Header>
+				<Card.Content class="space-y-6">
+					<div class="flex gap-3">
+						<Button
+							href="https://docs.hyprnote.com/owhisper/cli/get-started"
+							target="_blank"
+							rel="noopener noreferrer"
+						>
+							Getting Started Guide
+						</Button>
+						<Button
+							variant="outline"
+							href="https://github.com/fastrepl/hyprnote/releases"
+							target="_blank"
+							rel="noopener noreferrer"
+						>
+							Download Releases
+						</Button>
+					</div>
+
+					<div class="space-y-4">
+						<div>
+							<p class="text-sm font-medium">
+								<span class="text-muted-foreground">Step 1:</span> Install Owhisper
+								CLI
+							</p>
+							<ul class="ml-6 mt-2 space-y-2 text-sm text-muted-foreground">
+								<li class="list-disc">
+									<strong>macOS:</strong> Install via Homebrew
+								</li>
+							</ul>
+							<div class="mt-2">
+								<CopyablePre
+									copyableText="brew tap fastrepl/hyprnote && brew install owhisper"
+									variant="code"
+								/>
+							</div>
+							<ul class="ml-6 mt-2 space-y-2 text-sm text-muted-foreground">
+								<li class="list-disc">
+									<strong>Linux:</strong> Download binary from <Button
+										variant="link"
+										size="sm"
+										class="px-0 h-auto underline"
+										href="https://github.com/fastrepl/hyprnote/releases"
+										target="_blank"
+										rel="noopener noreferrer"
+									>
+										GitHub releases
+									</Button>
+								</li>
+							</ul>
+						</div>
+
+						<div>
+							<p class="text-sm font-medium">
+								<span class="text-muted-foreground">Step 2:</span> Download a transcription
+								model
+							</p>
+							<ul class="ml-6 mt-2 space-y-2 text-sm text-muted-foreground">
+								<li class="list-disc">
+									Choose from whisper-cpp or moonshine models
+								</li>
+								<li class="list-disc">
+									Example: Download the base English model
+								</li>
+							</ul>
+							<div class="mt-2">
+								<CopyablePre
+									copyableText="owhisper pull whisper-cpp-base-q8-en"
+									variant="code"
+								/>
+							</div>
+							<div class="mt-3 space-y-1">
+								<p class="text-xs text-muted-foreground font-medium">Other model options:</p>
+								<div class="space-y-1">
+									<CopyablePre
+										copyableText="owhisper pull whisper-cpp-tiny-q8-en"
+										variant="code"
+										class="text-xs"
+									/>
+									<CopyablePre
+										copyableText="owhisper pull moonshine-onnx-tiny"
+										variant="code"
+										class="text-xs"
+									/>
+									<CopyablePre
+										copyableText="owhisper pull whisper-cpp-small-q8"
+										variant="code"
+										class="text-xs"
+									/>
+								</div>
+							</div>
+						</div>
+
+						<div>
+							<p class="text-sm font-medium">
+								<span class="text-muted-foreground">Step 3:</span> Start the Owhisper
+								server
+							</p>
+							<ul class="ml-6 mt-2 space-y-2 text-sm text-muted-foreground">
+								<li class="list-disc">
+									Start server on port 8080 (recommended for Whispering)
+								</li>
+							</ul>
+							<div class="mt-2">
+								<CopyablePre
+									copyableText="owhisper serve --port 8080"
+									variant="code"
+								/>
+							</div>
+							<div class="mt-3">
+								<p class="text-xs text-muted-foreground">
+									Alternative: Run with a specific model directly
+								</p>
+								<div class="mt-1">
+									<CopyablePre
+										copyableText="owhisper run whisper-cpp-base-q8-en"
+										variant="code"
+										class="text-xs"
+									/>
+								</div>
+							</div>
+						</div>
+
+						<div>
+							<p class="text-sm font-medium">
+								<span class="text-muted-foreground">Step 4:</span> Configure the
+								settings below
+							</p>
+							<ul class="ml-6 mt-2 space-y-1 text-sm text-muted-foreground">
+								<li class="list-disc">Enter your Owhisper server URL</li>
+								<li class="list-disc">Enter the model ID you downloaded</li>
+							</ul>
+						</div>
+					</div>
+				</Card.Content>
+			</Card.Root>
+		</div>
+
+		<LabeledInput
+			id="owhisper-base-url"
+			label="Base URL"
+			placeholder="http://localhost:8080"
+			value={settings.value['transcription.owhisper.baseUrl']}
+			oninput={({ currentTarget: { value } }) => {
+				settings.updateKey('transcription.owhisper.baseUrl', value);
+			}}
+		>
+			{#snippet description()}
+				<p class="text-muted-foreground text-sm">
+					The URL where your Owhisper server is running, typically
+					<CopyToClipboardButton
+						contentDescription="owhisper base url"
+						textToCopy="http://localhost:8080"
+						class="bg-muted rounded px-[0.3rem] py-[0.15rem] font-mono text-sm hover:bg-muted/80"
+						variant="ghost"
+						size="sm"
+					>
+						http://localhost:8080
+						{#snippet copiedContent()}
+							http://localhost:8080
+							<CheckIcon class="size-4" />
+						{/snippet}
+					</CopyToClipboardButton>
+				</p>
+			{/snippet}
+		</LabeledInput>
+
+		<LabeledInput
+			id="owhisper-model-id"
+			label="Model ID"
+			placeholder="whisper-cpp-base-q8-en"
+			value={settings.value['transcription.owhisper.modelId']}
+			oninput={({ currentTarget: { value } }) => {
+				settings.updateKey('transcription.owhisper.modelId', value);
+			}}
+		>
+			{#snippet description()}
+				<p class="text-muted-foreground text-sm">
+					The model you downloaded in step 2, e.g.
+					<CopyToClipboardButton
+						contentDescription="owhisper model id"
+						textToCopy="whisper-cpp-base-q8-en"
+						class="bg-muted rounded px-[0.3rem] py-[0.15rem] font-mono text-sm hover:bg-muted/80"
+						variant="ghost"
+						size="sm"
+					>
+						whisper-cpp-base-q8-en
+						{#snippet copiedContent()}
+							whisper-cpp-base-q8-en
+							<CheckIcon class="size-4" />
+						{/snippet}
+					</CopyToClipboardButton>
+				</p>
+			{/snippet}
+		</LabeledInput>
 	{/if}
 
 	<LabeledSelect

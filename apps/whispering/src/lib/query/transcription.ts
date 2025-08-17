@@ -150,6 +150,14 @@ async function transcribeBlob(
 						modelId: settings.value['transcription.speaches.modelId'],
 						baseUrl: settings.value['transcription.speaches.baseUrl'],
 					});
+				case 'owhisper':
+					return await services.transcriptions.owhisper.transcribe(blob, {
+						outputLanguage: settings.value['transcription.outputLanguage'],
+						prompt: settings.value['transcription.prompt'],
+						temperature: settings.value['transcription.temperature'],
+						modelId: settings.value['transcription.owhisper.modelId'],
+						baseUrl: settings.value['transcription.owhisper.baseUrl'],
+					});
 				case 'ElevenLabs':
 					return await services.transcriptions.elevenlabs.transcribe(blob, {
 						outputLanguage: settings.value['transcription.outputLanguage'],
