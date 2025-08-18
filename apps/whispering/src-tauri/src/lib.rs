@@ -1,10 +1,3 @@
-// Platform-specific modules
-#[cfg(target_os = "macos")]
-mod accessibility;
-
-// Re-export platform-specific functions
-#[cfg(target_os = "macos")]
-use accessibility::{is_macos_accessibility_enabled, open_apple_accessibility};
 
 use tauri::Manager;
 use tauri_plugin_aptabase::EventTracker;
@@ -35,6 +28,7 @@ pub async fn run() {
     }
 
     builder = builder
+        .plugin(tauri_plugin_macos_permissions::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
@@ -43,6 +37,7 @@ pub async fn run() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
         .manage(AppData::new());
@@ -57,12 +52,9 @@ pub async fn run() {
         }));
     }
 
-    // Platform-specific command handlers
-    #[cfg(target_os = "macos")]
+    // Register command handlers (same for all platforms now)
     let builder = builder.invoke_handler(tauri::generate_handler![
         write_text,
-        open_apple_accessibility,
-        is_macos_accessibility_enabled,
         // Audio recorder commands
         get_current_recording_id,
         enumerate_recording_devices,
@@ -72,20 +64,6 @@ pub async fn run() {
         stop_recording,
         cancel_recording,
         // Whisper transcription
-        transcribe_with_whisper_cpp,
-    ]);
-
-    #[cfg(not(target_os = "macos"))]
-    let builder = builder.invoke_handler(tauri::generate_handler![
-        write_text,
-        // Audio recorder commands
-        get_current_recording_id,
-        enumerate_recording_devices,
-        init_recording_session,
-        close_recording_session,
-        start_recording,
-        stop_recording,
-        cancel_recording,
         transcribe_with_whisper_cpp,
     ]);
 
@@ -113,7 +91,7 @@ pub async fn run() {
 use enigo::{Direction, Enigo, Key, Keyboard, Settings};
 use tauri_plugin_clipboard_manager::ClipboardExt;
 
-/// Writes text at the cursor position using the clipboard sandwich technique.
+/// Writes text at the cursor position using the clipboard sandwich technique
 ///
 /// This method preserves the user's existing clipboard content by:
 /// 1. Saving the current clipboard content
