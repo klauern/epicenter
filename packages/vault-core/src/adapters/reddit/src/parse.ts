@@ -37,11 +37,11 @@ export async function parseRedditExport(
 	// Map to normalized shapes with coercions/derivations
 	const posts = postsRecords
 		.map((r) => mapPost(r))
-		.filter((p): p is ParsedRedditExport['posts'][number] => !!p);
+		.filter((p) => p !== undefined);
 
 	const comments = commentsRecords
 		.map((r) => mapComment(r))
-		.filter((c): c is ParsedRedditExport['comments'][number] => !!c);
+		.filter((c) => c !== undefined);
 
 	// Lightly mapped datasets (string fields only; optional everywhere)
 	const post_headers = (await readCsv('post_headers.csv')).map((r) => ({

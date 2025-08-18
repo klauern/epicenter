@@ -34,43 +34,15 @@
   <img alt="Rust" src="https://img.shields.io/badge/-Rust-orange?style=flat-square&logo=rust&logoColor=white" />
 </p>
 
-Whispering is an open source speech-to-text application. Press the shortcut, speak, and your words will transcribe, transform, then copy and paste at the cursor.
+Whispering is an open-source speech-to-text application. Press a keyboard shortcut, speak, and your words will transcribe, transform, then copy and paste at the cursor.
 
-All your data is stored locally on your device. Your audio goes directly from your machine to your chosen cloud or local provider. No middleman servers, no data collection, no margin.
+I really like hands-free voice dictation. For years, I relied on transcription tools that were *almost* good, but they were all closed-source. Even those claiming to be “local” or “on-device” were still black boxes that left me wondering where my audio really went.
 
-Built with Svelte 5 and Tauri, so it's tiny (~22MB) and starts instantly. The codebase is well-documented and designed to be understood. The app also has a few tricks up its sleeve, such as voice-activated mode for hands-free operation, and custom configurable AI transformations to automatically format your text, fix grammar, or translate languages.
+So I built Whispering. It’s open-source, local-first, and most importantly, transparent with your data. ​​All your data is stored locally on your device, and your audio goes directly from your machine to your chosen cloud provider (Groq, OpenAI, ElevenLabs, etc.) or local provider (Speaches, owhisper, etc.) without any middleman or vendor lock-in. For me, the features were good enough that I left my paid tools behind (I used Superwhisper and Wispr Flow before).
 
-Above all, we believe you should own your data, use any model you want, and support open-source. ❤️
+Productivity apps should be open-source and transparent with your data, but they also need to match the UX of paid, closed-software alternatives. I hope Whispering is near that point. I use it for several hours a day, from coding to thinking out loud while carrying pizza boxes back from the office.
 
-> **Note**: Whispering is designed for quick transcriptions, not long recordings. For extended recording sessions, use a dedicated recording app.
-
-## Why Whispering?
-
-Fundamental tools shouldn't require trusting a black box.
-
-Most transcription apps—even those claiming to be "local" or "privacy-focused"—are closed source. You have no idea what happens to your voice. Where does your audio really go? What data is collected? When they pivot, get acquired, or shut down, your workflow breaks.
-
-Whispering was created to be truly transparent:
-
-- **Open Source** (MIT licensed): Every line of code is auditable. See exactly where your audio goes, how it's processed, and what data is stored.
-- **Extensible**: Fork it, modify it, build on top of it. Add your own providers, create custom workflows, or strip out features you don't need.
-- **Your Data Stays Yours**: Recordings in IndexedDB, settings in local storage, private information never touch our servers. Export everything, delete everything, control everything.
-- **No Vendor Lock-in**: Use any provider—Groq, OpenAI, ElevenLabs, or run completely offline with Speaches. Your voice goes directly to your chosen provider. No middleman servers, no data collection, no mysteries.
-- **Community-driven**: Built in public on GitHub and Discord. Real issues from real users drive development.
-
-We're hoping that together in the open-source, local-first community, we can build something better than any closed-source alternative. The code is open source because I believe tools should be free. Companies pivot, get acquired, or shut down. But open source is forever.
-
-And finally, the cost savings. When you cut out the middleman, you pay providers directly:
-
-| Service | Cost per Hour | Light Use (20 min/day) | Moderate Use (1 hr/day) | Heavy Use (3 hr/day) | Traditional Tools |
-|---------|---------------|------------------------|-------------------------|----------------------|-------------------|
-| `distil-whisper-large-v3-en` (Groq) | $0.02 | $0.20/month | $0.60/month | $1.80/month | $15-30/month |
-| `whisper-large-v3-turbo` (Groq) | $0.04 | $0.40/month | $1.20/month | $3.60/month | $15-30/month |
-| `gpt-4o-mini-transcribe` (OpenAI) | $0.18 | $1.80/month | $5.40/month | $16.20/month | $15-30/month |
-| Local (Speaches) | $0.00 | $0.00/month | $0.00/month | $0.00/month | $15-30/month |
-
-
-## Demo
+Here’s an overview:
 
 <div align="center">
   <a href="https://www.youtube.com/watch?v=1jYgBMrfVZs">
@@ -79,7 +51,22 @@ And finally, the cost savings. When you cut out the middleman, you pay providers
   <p><em>Click to watch: Complete setup and usage guide (5 min)</em></p>
 </div>
 
-> **Want to see the voice coding workflow?** Check out this [3-minute demo](https://youtube.com/shorts/tP1fuFpJt7g) showing how I use Whispering with Claude Code for faster development.
+and [here’s how I personally am using it with Claude Code these days](https://www.youtube.com/watch?v=tpix588SeiQ).
+
+There are plenty of transcription apps out there, each with their own strengths. Whispering has a few tricks up its sleeve, like a voice-activated mode for truly hands-free operation (no button holding), and customizable AI transformations with any prompt/model. The space is full of great ideas, but I just wanted to add some extra competition from the OSS ecosystem.
+
+Built with Svelte 5 and Tauri, so it's tiny (~22MB) and starts instantly. The codebase is well-documented and designed to be understood and audited. That way, you know where your audio goes, how it's processed, and what data is stored. And finally, the cost savings. When you cut out the middleman, you pay providers directly:
+
+| Service | Cost per Hour | Light Use (20 min/day) | Moderate Use (1 hr/day) | Heavy Use (3 hr/day) | Traditional Tools |
+|---------|---------------|------------------------|-------------------------|----------------------|-------------------|
+| `distil-whisper-large-v3-en` (Groq) | $0.02 | $0.20/month | $0.60/month | $1.80/month | $15-30/month |
+| `whisper-large-v3-turbo` (Groq) | $0.04 | $0.40/month | $1.20/month | $3.60/month | $15-30/month |
+| `gpt-4o-mini-transcribe` (OpenAI) | $0.18 | $1.80/month | $5.40/month | $16.20/month | $15-30/month |
+| Local | $0.00 | $0.00/month | $0.00/month | $0.00/month | $15-30/month |
+
+We're hoping that together in the open-source, local-first community, we can build something better than any closed-source alternative. The code is open-source because I believe that fundamental tools shouldn't require trusting a black box. Companies pivot, get acquired, or shut down. But open source is forever. ❤️
+
+> **Note**: Whispering is designed for quick transcriptions, not long recordings. For extended recording sessions, we recommend using a dedicated recording app. Check out our friends at [Hyprnote](https://github.com/fastrepl/hyprnote)
 
 ## Install Whispering
 
@@ -987,11 +974,10 @@ Feel free to suggest and implement any features that improve usability—I'll do
 
 ### License
 
-Whispering is released under the [MIT License](LICENSE). Use it, modify it, learn from it, and build upon it freely.
-
+Whispering is released under the [MIT License](LICENSE). Fork it, modify it, build on top of it, make it yours.
 ### Support and Feedback
 
-If you encounter any issues or have suggestions for improvements, please open an issue on the [GitHub issues tab](https://github.com/epicenter-so/epicenter/issues). I really appreciate your feedback!
+We're built in public, shaped by user feedback. If you encounter any issues or have suggestions for improvements, please open an issue on the [GitHub issues tab](https://github.com/epicenter-so/epicenter/issues). I really appreciate it!
 
 - Community Discord: [Discord](https://go.epicenter.so/discord)
 - Feature Requests, Issues, and Bug Reports: [GitHub Issues](https://github.com/epicenter-so/epicenter/issues)

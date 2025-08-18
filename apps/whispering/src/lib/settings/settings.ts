@@ -170,7 +170,7 @@ export const settingsSchema = z.object({
 	'transcription.deepgram.model': z
 		.string()
 		.transform((val) => val as (string & {}) | DeepgramModel['name'])
-		.default('nova-2' satisfies DeepgramModel['name']),
+		.default('nova-3' satisfies DeepgramModel['name']),
 	'transcription.speaches.baseUrl': z.string().default('http://localhost:8000'),
 	'transcription.speaches.modelId': z
 		.string()
