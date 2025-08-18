@@ -94,10 +94,10 @@
 			</WhisperingButton>
 		{/snippet}
 	</Popover.Trigger>
-	<Popover.Content class="w-80 max-w-xl p-0">
+	<Popover.Content class="p-0">
 		<Command.Root loop>
 			<Command.Input placeholder="Select transcription service..." />
-			<Command.List class="overflow-y-auto max-h-[400px]">
+			<Command.List class="max-h-[40vh]">
 				<Command.Empty>No service found.</Command.Empty>
 
 				{#each apiServices as service (service.id)}
@@ -154,7 +154,10 @@
 						<Command.Item
 							value={service.id}
 							onSelect={() => {
-								settings.updateKey('transcription.selectedTranscriptionService', service.id);
+								settings.updateKey(
+									'transcription.selectedTranscriptionService',
+									service.id,
+								);
 								combobox.closeAndFocusTrigger();
 							}}
 							class="flex items-center gap-2 p-2"
@@ -176,49 +179,19 @@
 					</Command.Group>
 				{/each}
 
-				{#each localServices as service (service.id)}
-					{@const isSelected =
-						settings.value['transcription.selectedTranscriptionService'] ===
-						service.id}
-					{@const isConfigured = isTranscriptionServiceConfigured(service)}
-
-					<Command.Group heading={service.name}>
-						<Command.Item
-							value={service.id}
-							onSelect={() => {
-								settings.updateKey('transcription.selectedTranscriptionService', service.id);
-								combobox.closeAndFocusTrigger();
-							}}
-							class="flex items-center gap-2 p-2"
-						>
-							<CheckIcon
-								class={cn('size-4 shrink-0 ml-2', {
-									'text-transparent': !isSelected,
-								})}
-							/>
-							<div class="flex flex-col min-w-0">
-								{@render renderServiceDisplay(service)}
-								{#if !isConfigured}
-									<span class="text-sm text-amber-600 ml-6">
-										Model file required
-									</span>
-								{/if}
-							</div>
-						</Command.Item>
-					</Command.Group>
-				{/each}
+				<Command.Separator />
+				<Command.Item
+					value="Configure transcription"
+					onSelect={() => {
+						goto('/settings/transcription');
+						combobox.closeAndFocusTrigger();
+					}}
+					class="rounded-none p-2 bg-muted/50 text-muted-foreground"
+				>
+					<SettingsIcon class="size-4 mx-2.5" />
+					Configure transcription
+				</Command.Item>
 			</Command.List>
-			<Command.Item
-				value="Configure transcription"
-				onSelect={() => {
-					goto('/settings/transcription');
-					combobox.closeAndFocusTrigger();
-				}}
-				class="rounded-none p-2 bg-muted/50 text-muted-foreground"
-			>
-				<SettingsIcon class="size-4 mx-2.5" />
-				Configure transcription
-			</Command.Item>
 		</Command.Root>
 	</Popover.Content>
 </Popover.Root>

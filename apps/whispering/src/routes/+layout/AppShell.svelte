@@ -89,6 +89,7 @@
 				closeButton: 'w-full mt-3 inline-flex justify-center',
 			},
 		},
+		closeButton: true,
 	} satisfies ToasterProps;
 
 	let { children } = $props();
