@@ -159,29 +159,4 @@ export const redditAdapter = defineAdapter({
 			},
 		},
 	}),
-
-	hooks: {
-		beforeWrite: async (record) => {
-			// Ensure IDs are prefixed
-			if (!record.id?.startsWith('reddit_')) {
-				record.id = `reddit_${record.id || Date.now()}`;
-			}
-
-			// Normalize dates
-			if (record.created_at && typeof record.created_at === 'string') {
-				record.created_at = new Date(record.created_at);
-			}
-
-			return record;
-		},
-
-		afterRead: async (record) => {
-			// Parse dates
-			if (record.created_at && typeof record.created_at === 'string') {
-				record.created_at = new Date(record.created_at);
-			}
-
-			return record;
-		},
-	},
 });
