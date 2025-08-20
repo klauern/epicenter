@@ -24,51 +24,45 @@ export function defineVault<const TAdapters extends readonly AdapterConfig[]>(
 		mkdir(config.path, { recursive: true });
 	}
 
-	// Build subfolders object with base methods using reduce
-	const baseSubfolders = config.adapters.reduce<
-		Record<string, BaseSubfolderMethods<SchemaDefinition>>
-	>(
-		(acc, adapter) =>
-			Object.entries(adapter.schemas).reduce((subAcc, [subfolder, schema]) => {
-				if (!subAcc[subfolder]) {
-					subAcc[subfolder] = createSubfolderMethods(
-						config.path,
-						subfolder,
-						schema,
-					);
-				}
-				return subAcc;
-			}, acc),
-		{},
+	// Collect all schemas from adapters
+	const allSchemas = config.adapters.reduce((acc, adapter) => {
+		for (const [name, schema] of Object.entries(adapter.schemas)) {
+			acc[name] = acc[name] || schema; // Use first schema if duplicates
+		}
+		return acc;
+	}, {} as Record<string, SchemaDefinition>);
+
+	// Build subfolders with base methods
+	const baseSubfolders = Object.fromEntries(
+		Object.entries(allSchemas).map(([name, schema]) => [
+			name,
+			createSubfolderMethods(config.path, name, schema)
+		])
 	);
 
-	// Add custom methods from adapters using reduce
+	// Apply custom methods from each adapter
 	const subfolders = config.adapters.reduce((acc, adapter) => {
 		if (!adapter.methods) return acc;
 
-		// Create vault context with only the adapter's subfolders
-		const vaultContext = Object.keys(adapter.schemas).reduce(
-			(ctx, subfolder) => {
-				ctx[subfolder] = acc[subfolder];
-				return ctx;
-			},
-			{} as any,
+		// Build vault context with only this adapter's subfolders
+		const vaultContext = Object.fromEntries(
+			Object.keys(adapter.schemas)
+				.filter(key => acc[key])
+				.map(key => [key, acc[key]])
 		);
 
-		// Get custom methods from adapter
-		const customMethods = adapter.methods(vaultContext);
-
-		// Merge custom methods into subfolders
-		return Object.entries(customMethods || {}).reduce(
-			(mergedAcc, [subfolder, methods]) => {
-				if (mergedAcc[subfolder] && methods) {
-					Object.assign(mergedAcc[subfolder], methods);
-				}
-				return mergedAcc;
-			},
-			acc,
-		);
-	}, baseSubfolders);
+		// Get and merge custom methods
+		const customMethods = adapter.methods(vaultContext) || {};
+		
+		// Merge methods into subfolders
+		for (const [name, methods] of Object.entries(customMethods)) {
+			if (acc[name] && methods) {
+				Object.assign(acc[name], methods);
+			}
+		}
+		
+		return acc;
+	}, { ...baseSubfolders });
 
 	// Build the vault object in one go using spread syntax
 	const vault = {
