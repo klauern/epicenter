@@ -72,15 +72,15 @@ export type BaseSubfolderMethods<TSchema extends SchemaDefinition> = {
 
 // Vault core methods
 export type VaultCoreMethods = {
-	$sync(): Promise<void>;
-	$refresh(): Promise<void>;
-	$export(format: 'json' | 'sql'): Promise<string>;
-	$stats(): Promise<{
+	sync(): Promise<void>;
+	refresh(): Promise<void>;
+	export(format: 'json' | 'sql'): Promise<string>;
+	stats(): Promise<{
 		subfolders: number;
 		totalRecords: number;
 		lastSync: Date | null;
 	}>;
-	$query<T = any>(sql: string): Promise<T[]>;
+	query<T = any>(sql: string): Promise<T[]>;
 };
 
 // Complex type builders for full inference

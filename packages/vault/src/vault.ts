@@ -25,52 +25,53 @@ export function defineVault<const TAdapters extends readonly AdapterConfig[]>(
 		mkdir(config.path, { recursive: true });
 	}
 
-	// First pass: create base methods for all subfolders
-	const baseVault: any = {};
+	// Build all subfolders with base methods
 	for (const adapter of config.adapters) {
 		for (const [subfolder, schema] of Object.entries(adapter.schemas)) {
-			baseVault[subfolder] = createSubfolderProxy(
-				config.path,
-				subfolder,
-				schema,
-				{}, // No custom methods yet
-			);
+			// Create subfolder if it doesn't exist already
+			if (!vault[subfolder]) {
+				vault[subfolder] = createSubfolderMethods(
+					config.path,
+					subfolder,
+					schema,
+				);
+			}
 		}
 	}
 
-	// Second pass: add custom methods with vault context
+	// Add custom methods from adapters
 	for (const adapter of config.adapters) {
 		if (adapter.methods) {
-			// Call methods builder with the vault context
-			const customMethods = adapter.methods(baseVault);
+			// Create vault context with only the adapter's subfolders
+			const vaultContext: any = {};
+			for (const subfolder of Object.keys(adapter.schemas)) {
+				vaultContext[subfolder] = vault[subfolder];
+			}
 
-			// Add custom methods to each subfolder
-			for (const [subfolder, methods] of Object.entries(customMethods)) {
-				if (baseVault[subfolder] && methods) {
-					// Add each custom method to the subfolder
-					for (const [methodName, method] of Object.entries(methods)) {
-						baseVault[subfolder][methodName] = method;
-					}
+			// Get custom methods from adapter
+			const customMethods = adapter.methods(vaultContext);
+
+			// Merge custom methods into existing subfolders
+			for (const [subfolder, methods] of Object.entries(customMethods || {})) {
+				if (vault[subfolder] && methods) {
+					Object.assign(vault[subfolder], methods);
 				}
 			}
 		}
 	}
 
-	// Copy to final vault
-	Object.assign(vault, baseVault);
-
-	// Add core vault methods
-	vault.$sync = async () => {
+	// Add core vault methods (without $ prefix)
+	vault.sync = async () => {
 		console.log('Syncing vault to SQLite...');
 		// In a real implementation, this would sync markdown files to SQLite
 	};
 
-	vault.$refresh = async () => {
+	vault.refresh = async () => {
 		console.log('Refreshing vault from disk...');
 		// Reload all markdown files
 	};
 
-	vault.$export = async (format: 'json' | 'sql') => {
+	vault.export = async (format: 'json' | 'sql') => {
 		console.log(`Exporting vault as ${format}...`);
 
 		if (format === 'json') {
@@ -90,7 +91,7 @@ export function defineVault<const TAdapters extends readonly AdapterConfig[]>(
 		return '-- SQL export not implemented yet';
 	};
 
-	vault.$stats = async () => {
+	vault.stats = async () => {
 		let totalRecords = 0;
 		let subfolderCount = 0;
 
@@ -110,7 +111,7 @@ export function defineVault<const TAdapters extends readonly AdapterConfig[]>(
 		};
 	};
 
-	vault.$query = async (sql: string) => {
+	vault.query = async (sql: string) => {
 		console.log('Executing SQL query:', sql);
 		// In a real implementation, this would query the SQLite database
 		return [];
@@ -120,14 +121,13 @@ export function defineVault<const TAdapters extends readonly AdapterConfig[]>(
 }
 
 /**
- * Create a subfolder proxy with base methods and custom adapter methods
+ * Create base CRUD methods for a subfolder
  */
-function createSubfolderProxy(
+function createSubfolderMethods(
 	vaultPath: string,
 	subfolder: string,
 	schema: SchemaDefinition,
-	customMethods: Record<string, Function> = {},
-): BaseSubfolderMethods<any> & Record<string, Function> {
+): BaseSubfolderMethods<any> {
 	const subfolderPath = join(vaultPath, subfolder);
 
 	// Ensure subfolder exists
@@ -135,7 +135,7 @@ function createSubfolderProxy(
 		mkdir(subfolderPath, { recursive: true });
 	}
 
-	const baseMethods: BaseSubfolderMethods<any> = {
+	return {
 		async getById(id: string) {
 			const filePath = join(subfolderPath, `${id}.md`);
 			if (!existsSync(filePath)) return null;
@@ -243,14 +243,4 @@ function createSubfolderProxy(
 			return all.filter((record: any) => record[field] === value);
 		},
 	};
-
-	// Create a combined object with all methods
-	const allMethods = { ...baseMethods };
-
-	// Bind custom methods with the full context (including other custom methods)
-	for (const [name, method] of Object.entries(customMethods)) {
-		allMethods[name] = method.bind(allMethods);
-	}
-
-	return allMethods;
 }
