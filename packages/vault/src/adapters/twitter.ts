@@ -52,26 +52,26 @@ export const twitterAdapter = defineAdapter({
     }
   },
   
-  methods: {
+  methods: (vault) => ({
     tweets: {
-      async getViral(this: any, threshold: number = 1000) {
-        const tweets = await this.getAll();
+      async getViral(threshold: number = 1000) {
+        const tweets = await vault.tweets.getAll();
         return tweets.filter((t: any) => (t.likes + t.retweets) > threshold);
       },
       
-      async getByAuthor(this: any, username: string) {
-        return this.where('author_username', username);
+      async getByAuthor(username: string) {
+        return vault.tweets.where('author_username', username);
       },
       
-      async getThread(this: any, threadId: string) {
-        const tweets = await this.where('thread_id', threadId);
+      async getThread(threadId: string) {
+        const tweets = await vault.tweets.where('thread_id', threadId);
         return tweets.sort((a: any, b: any) => 
           new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
         );
       },
       
-      async getTrending(this: any, hours: number = 24) {
-        const all = await this.getAll();
+      async getTrending(hours: number = 24) {
+        const all = await vault.tweets.getAll();
         const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000);
         
         return all
@@ -85,8 +85,8 @@ export const twitterAdapter = defineAdapter({
           .slice(0, 20);
       },
       
-      async searchTweets(this: any, query: string) {
-        const all = await this.getAll();
+      async searchTweets(query: string) {
+        const all = await vault.tweets.getAll();
         const searchTerm = query.toLowerCase();
         
         return all.filter((tweet: any) => {
@@ -104,8 +104,8 @@ export const twitterAdapter = defineAdapter({
         });
       },
       
-      async getByHashtag(this: any, hashtag: string) {
-        const all = await this.getAll();
+      async getByHashtag(hashtag: string) {
+        const all = await vault.tweets.getAll();
         const tag = hashtag.replace('#', '').toLowerCase();
         
         return all.filter((tweet: any) => {
@@ -116,8 +116,8 @@ export const twitterAdapter = defineAdapter({
         });
       },
       
-      async getEngagementStats(this: any, tweetId: string) {
-        const tweet = await this.getById(tweetId);
+      async getEngagementStats(tweetId: string) {
+        const tweet = await vault.tweets.getById(tweetId);
         if (!tweet) return null;
         
         const engagementRate = tweet.views > 0 
@@ -136,19 +136,19 @@ export const twitterAdapter = defineAdapter({
     },
     
     users: {
-      async getByUsername(this: any, username: string) {
-        return this.where('username', username);
+      async getByUsername(username: string) {
+        return vault.users.where('username', username);
       },
       
-      async getInfluencers(this: any, minFollowers: number = 10000) {
-        const all = await this.getAll();
+      async getInfluencers(minFollowers: number = 10000) {
+        const all = await vault.users.getAll();
         return all
           .filter((user: any) => user.followers >= minFollowers)
           .sort((a: any, b: any) => b.followers - a.followers);
       },
       
-      async search(this: any, query: string) {
-        const all = await this.getAll();
+      async search(query: string) {
+        const all = await vault.users.getAll();
         const searchTerm = query.toLowerCase();
         
         return all.filter((user: any) =>
@@ -158,8 +158,8 @@ export const twitterAdapter = defineAdapter({
         );
       },
       
-      async getEngagementMetrics(this: any, username: string) {
-        const user = await this.getByUsername(username);
+      async getEngagementMetrics(username: string) {
+        const user = await vault.users.where('username', username);
         if (!user || !user[0]) return null;
         
         const userData = user[0];
@@ -183,15 +183,15 @@ export const twitterAdapter = defineAdapter({
     },
     
     interactions: {
-      async getByUser(this: any, username: string) {
-        const all = await this.getAll();
+      async getByUser(username: string) {
+        const all = await vault.interactions.getAll();
         return all.filter((i: any) => 
           i.source_user === username || i.target_user === username
         );
       },
       
-      async getLikes(this: any, tweetId?: string) {
-        const all = await this.getAll();
+      async getLikes(tweetId?: string) {
+        const all = await vault.interactions.getAll();
         const likes = all.filter((i: any) => i.type === 'like');
         
         if (tweetId) {
@@ -201,8 +201,8 @@ export const twitterAdapter = defineAdapter({
         return likes;
       },
       
-      async getRetweets(this: any, tweetId?: string) {
-        const all = await this.getAll();
+      async getRetweets(tweetId?: string) {
+        const all = await vault.interactions.getAll();
         const retweets = all.filter((i: any) => i.type === 'retweet');
         
         if (tweetId) {
@@ -212,22 +212,24 @@ export const twitterAdapter = defineAdapter({
         return retweets;
       },
       
-      async getFollowers(this: any, username: string) {
-        const all = await this.getAll();
+      async getFollowers(username: string) {
+        const all = await vault.interactions.getAll();
         return all.filter((i: any) => 
           i.type === 'follow' && i.target_user === username
         );
       },
       
-      async getFollowing(this: any, username: string) {
-        const all = await this.getAll();
+      async getFollowing(username: string) {
+        const all = await vault.interactions.getAll();
         return all.filter((i: any) => 
           i.type === 'follow' && i.source_user === username
         );
       },
       
-      async getEngagementGraph(this: any, username: string, depth: number = 1) {
-        const interactions = await this.getByUser(username);
+      async getEngagementGraph(username: string, depth: number = 1) {
+        const interactions = await vault.interactions.getAll().then(all => 
+          all.filter((i: any) => i.source_user === username || i.target_user === username)
+        );
         const graph = { nodes: new Set([username]), edges: [] as any[] };
         
         for (const interaction of interactions) {
@@ -258,7 +260,7 @@ export const twitterAdapter = defineAdapter({
         };
       }
     }
-  },
+  }),
   
   hooks: {
     beforeWrite: async (record) => {

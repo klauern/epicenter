@@ -19,14 +19,25 @@ export type AdapterHooks = {
   afterSync?: (records: MarkdownRecord[]) => void | Promise<void>;
 };
 
+// Method context that gets passed to adapter methods
+export type MethodContext<TSchema extends SchemaDefinition> = BaseSubfolderMethods<TSchema>;
+
+// Methods builder function that receives vault context
+export type MethodsBuilder<TSchemas extends Record<string, SchemaDefinition>> = (
+  context: {
+    [K in keyof TSchemas]: MethodContext<TSchemas[K]>
+  }
+) => {
+  [K in keyof TSchemas]?: Record<string, (...args: any[]) => any>
+};
+
 export type AdapterConfig<
-  TSchemas extends Record<string, SchemaDefinition> = Record<string, SchemaDefinition>,
-  TMethods extends Record<string, Record<string, Function>> = Record<string, Record<string, Function>>
+  TSchemas extends Record<string, SchemaDefinition> = Record<string, SchemaDefinition>
 > = {
   id: string;
   name: string;
   schemas: TSchemas;
-  methods?: TMethods;
+  methods?: MethodsBuilder<TSchemas>;
   hooks?: AdapterHooks;
 };
 
@@ -93,7 +104,7 @@ export type ExtractSchemaForSubfolder<
   T extends readonly AdapterConfig[],
   Subfolder extends string
 > = T extends readonly [infer First, ...infer Rest]
-  ? First extends AdapterConfig<infer S, any>
+  ? First extends AdapterConfig<infer S>
     ? Subfolder extends keyof S
       ? S[Subfolder]
       : Rest extends readonly AdapterConfig[]
@@ -102,22 +113,17 @@ export type ExtractSchemaForSubfolder<
     : never
   : never;
 
+// Extract methods for a specific subfolder from adapters
+// Since methods are now built dynamically, we'll type them as any for now
+// In a real implementation, we'd need more complex type inference
 export type ExtractMethodsForSubfolder<
   T extends readonly AdapterConfig[],
   Subfolder extends string
-> = T extends readonly [infer First, ...infer Rest]
-  ? First extends AdapterConfig<any, infer M>
-    ? Subfolder extends keyof M
-      ? M[Subfolder]
-      : Rest extends readonly AdapterConfig[]
-        ? ExtractMethodsForSubfolder<Rest, Subfolder>
-        : {}
-    : {}
-  : {};
+> = Record<string, (...args: any[]) => any>;
 
 export type ExtractAllSubfolders<T extends readonly AdapterConfig[]> = 
   T extends readonly [infer First, ...infer Rest]
-    ? First extends AdapterConfig<infer S, any>
+    ? First extends AdapterConfig<infer S>
       ? Rest extends readonly AdapterConfig[]
         ? { [K in keyof S]: S[K] } | ExtractAllSubfolders<Rest>
         : { [K in keyof S]: S[K] }

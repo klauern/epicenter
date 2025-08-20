@@ -161,21 +161,39 @@ export function defineVault<
     mkdir(config.path, { recursive: true });
   }
 
-  // Build subfolder proxies from all adapters
+  // First pass: create base methods for all subfolders
+  const baseVault: any = {};
   for (const adapter of config.adapters) {
     for (const [subfolder, schema] of Object.entries(adapter.schemas)) {
-      // Get custom methods for this subfolder if they exist
-      const customMethods = adapter.methods?.[subfolder] || {};
-      
-      // Create the subfolder proxy with base + custom methods
-      vault[subfolder] = createSubfolderProxy(
+      baseVault[subfolder] = createSubfolderProxy(
         config.path,
         subfolder,
         schema,
-        customMethods
+        {} // No custom methods yet
       );
     }
   }
+  
+  // Second pass: add custom methods with vault context
+  for (const adapter of config.adapters) {
+    if (adapter.methods) {
+      // Call methods builder with the vault context
+      const customMethods = adapter.methods(baseVault);
+      
+      // Add custom methods to each subfolder
+      for (const [subfolder, methods] of Object.entries(customMethods)) {
+        if (baseVault[subfolder] && methods) {
+          // Add each custom method to the subfolder
+          for (const [methodName, method] of Object.entries(methods)) {
+            baseVault[subfolder][methodName] = method;
+          }
+        }
+      }
+    }
+  }
+  
+  // Copy to final vault
+  Object.assign(vault, baseVault);
 
   // Add core vault methods
   vault.$sync = async () => {

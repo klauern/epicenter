@@ -44,22 +44,22 @@ export const redditAdapter = defineAdapter({
     }
   },
   
-  methods: {
+  methods: (vault) => ({
     posts: {
-      async getTopPosts(this: any, limit: number = 10) {
-        return this.find({ 
+      async getTopPosts(limit: number = 10) {
+        return vault.posts.find({ 
           orderBy: 'score', 
           order: 'desc',
           limit 
         });
       },
       
-      async getBySubreddit(this: any, subreddit: string) {
-        return this.where('subreddit', subreddit);
+      async getBySubreddit(subreddit: string) {
+        return vault.posts.where('subreddit', subreddit);
       },
       
-      async getHotPosts(this: any, hours: number = 24) {
-        const all = await this.getAll();
+      async getHotPosts(hours: number = 24) {
+        const all = await vault.posts.getAll();
         const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000);
         
         return all
@@ -74,8 +74,8 @@ export const redditAdapter = defineAdapter({
           });
       },
       
-      async searchPosts(this: any, query: string) {
-        const all = await this.getAll();
+      async searchPosts(query: string) {
+        const all = await vault.posts.getAll();
         const searchTerm = query.toLowerCase();
         
         return all.filter((post: any) => 
@@ -86,24 +86,24 @@ export const redditAdapter = defineAdapter({
     },
     
     comments: {
-      async getByPost(this: any, postId: string) {
-        return this.where('post_id', postId);
+      async getByPost(postId: string) {
+        return vault.comments.where('post_id', postId);
       },
       
-      async getByAuthor(this: any, author: string) {
-        return this.where('author', author);
+      async getByAuthor(author: string) {
+        return vault.comments.where('author', author);
       },
       
-      async getTopComments(this: any, limit: number = 10) {
-        return this.find({
+      async getTopComments(limit: number = 10) {
+        return vault.comments.find({
           orderBy: 'score',
           order: 'desc',
           limit
         });
       },
       
-      async getThreads(this: any, postId: string) {
-        const comments = await this.getByPost(postId);
+      async getThreads(postId: string) {
+        const comments = await vault.comments.where('post_id', postId);
         
         // Build comment tree structure
         const commentMap = new Map();
@@ -126,21 +126,21 @@ export const redditAdapter = defineAdapter({
     },
     
     subreddits: {
-      async getByName(this: any, name: string) {
-        const all = await this.getAll();
+      async getByName(name: string) {
+        const all = await vault.subreddits.getAll();
         return all.find((sub: any) => sub.name === name);
       },
       
-      async getPopular(this: any, limit: number = 10) {
-        return this.find({
+      async getPopular(limit: number = 10) {
+        return vault.subreddits.find({
           orderBy: 'subscribers',
           order: 'desc',
           limit
         });
       },
       
-      async search(this: any, query: string) {
-        const all = await this.getAll();
+      async search(query: string) {
+        const all = await vault.subreddits.getAll();
         const searchTerm = query.toLowerCase();
         
         return all.filter((sub: any) =>
@@ -150,7 +150,7 @@ export const redditAdapter = defineAdapter({
         );
       }
     }
-  },
+  }),
   
   hooks: {
     beforeWrite: async (record) => {
