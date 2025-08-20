@@ -13,6 +13,113 @@ import type {
 } from './types';
 
 /**
+ * Define a vault with adapters
+ */
+export function defineVault<const TAdapters extends readonly AdapterConfig[]>(
+	config: VaultConfig<TAdapters>,
+): BuildVaultType<TAdapters> {
+	const vault: any = {};
+
+	// Ensure vault directory exists
+	if (!existsSync(config.path)) {
+		mkdir(config.path, { recursive: true });
+	}
+
+	// First pass: create base methods for all subfolders
+	const baseVault: any = {};
+	for (const adapter of config.adapters) {
+		for (const [subfolder, schema] of Object.entries(adapter.schemas)) {
+			baseVault[subfolder] = createSubfolderProxy(
+				config.path,
+				subfolder,
+				schema,
+				{}, // No custom methods yet
+			);
+		}
+	}
+
+	// Second pass: add custom methods with vault context
+	for (const adapter of config.adapters) {
+		if (adapter.methods) {
+			// Call methods builder with the vault context
+			const customMethods = adapter.methods(baseVault);
+
+			// Add custom methods to each subfolder
+			for (const [subfolder, methods] of Object.entries(customMethods)) {
+				if (baseVault[subfolder] && methods) {
+					// Add each custom method to the subfolder
+					for (const [methodName, method] of Object.entries(methods)) {
+						baseVault[subfolder][methodName] = method;
+					}
+				}
+			}
+		}
+	}
+
+	// Copy to final vault
+	Object.assign(vault, baseVault);
+
+	// Add core vault methods
+	vault.$sync = async () => {
+		console.log('Syncing vault to SQLite...');
+		// In a real implementation, this would sync markdown files to SQLite
+	};
+
+	vault.$refresh = async () => {
+		console.log('Refreshing vault from disk...');
+		// Reload all markdown files
+	};
+
+	vault.$export = async (format: 'json' | 'sql') => {
+		console.log(`Exporting vault as ${format}...`);
+
+		if (format === 'json') {
+			const allData: Record<string, any[]> = {};
+
+			for (const adapter of config.adapters) {
+				for (const subfolder of Object.keys(adapter.schemas)) {
+					if (vault[subfolder]) {
+						allData[subfolder] = await vault[subfolder].getAll();
+					}
+				}
+			}
+
+			return JSON.stringify(allData, null, 2);
+		}
+
+		return '-- SQL export not implemented yet';
+	};
+
+	vault.$stats = async () => {
+		let totalRecords = 0;
+		let subfolderCount = 0;
+
+		for (const adapter of config.adapters) {
+			for (const subfolder of Object.keys(adapter.schemas)) {
+				if (vault[subfolder]) {
+					subfolderCount++;
+					totalRecords += await vault[subfolder].count();
+				}
+			}
+		}
+
+		return {
+			subfolders: subfolderCount,
+			totalRecords,
+			lastSync: null,
+		};
+	};
+
+	vault.$query = async (sql: string) => {
+		console.log('Executing SQL query:', sql);
+		// In a real implementation, this would query the SQLite database
+		return [];
+	};
+
+	return vault as BuildVaultType<TAdapters>;
+}
+
+/**
  * Create a subfolder proxy with base methods and custom adapter methods
  */
 function createSubfolderProxy(
@@ -146,111 +253,4 @@ function createSubfolderProxy(
 	}
 
 	return allMethods;
-}
-
-/**
- * Define a vault with adapters
- */
-export function defineVault<const TAdapters extends readonly AdapterConfig[]>(
-	config: VaultConfig<TAdapters>,
-): BuildVaultType<TAdapters> {
-	const vault: any = {};
-
-	// Ensure vault directory exists
-	if (!existsSync(config.path)) {
-		mkdir(config.path, { recursive: true });
-	}
-
-	// First pass: create base methods for all subfolders
-	const baseVault: any = {};
-	for (const adapter of config.adapters) {
-		for (const [subfolder, schema] of Object.entries(adapter.schemas)) {
-			baseVault[subfolder] = createSubfolderProxy(
-				config.path,
-				subfolder,
-				schema,
-				{}, // No custom methods yet
-			);
-		}
-	}
-
-	// Second pass: add custom methods with vault context
-	for (const adapter of config.adapters) {
-		if (adapter.methods) {
-			// Call methods builder with the vault context
-			const customMethods = adapter.methods(baseVault);
-
-			// Add custom methods to each subfolder
-			for (const [subfolder, methods] of Object.entries(customMethods)) {
-				if (baseVault[subfolder] && methods) {
-					// Add each custom method to the subfolder
-					for (const [methodName, method] of Object.entries(methods)) {
-						baseVault[subfolder][methodName] = method;
-					}
-				}
-			}
-		}
-	}
-
-	// Copy to final vault
-	Object.assign(vault, baseVault);
-
-	// Add core vault methods
-	vault.$sync = async () => {
-		console.log('Syncing vault to SQLite...');
-		// In a real implementation, this would sync markdown files to SQLite
-	};
-
-	vault.$refresh = async () => {
-		console.log('Refreshing vault from disk...');
-		// Reload all markdown files
-	};
-
-	vault.$export = async (format: 'json' | 'sql') => {
-		console.log(`Exporting vault as ${format}...`);
-
-		if (format === 'json') {
-			const allData: Record<string, any[]> = {};
-
-			for (const adapter of config.adapters) {
-				for (const subfolder of Object.keys(adapter.schemas)) {
-					if (vault[subfolder]) {
-						allData[subfolder] = await vault[subfolder].getAll();
-					}
-				}
-			}
-
-			return JSON.stringify(allData, null, 2);
-		}
-
-		return '-- SQL export not implemented yet';
-	};
-
-	vault.$stats = async () => {
-		let totalRecords = 0;
-		let subfolderCount = 0;
-
-		for (const adapter of config.adapters) {
-			for (const subfolder of Object.keys(adapter.schemas)) {
-				if (vault[subfolder]) {
-					subfolderCount++;
-					totalRecords += await vault[subfolder].count();
-				}
-			}
-		}
-
-		return {
-			subfolders: subfolderCount,
-			totalRecords,
-			lastSync: null,
-		};
-	};
-
-	vault.$query = async (sql: string) => {
-		console.log('Executing SQL query:', sql);
-		// In a real implementation, this would query the SQLite database
-		return [];
-	};
-
-	return vault as BuildVaultType<TAdapters>;
 }
