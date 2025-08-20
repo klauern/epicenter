@@ -41,10 +41,35 @@ export const redditAdapter = defineAdapter({
       created_at: 'date',
       is_nsfw: 'boolean',
       rules: 'json',
-    }
+    },
   },
   
-  methods: (vault) => ({
+  hooks: {
+    beforeWrite: async (record) => {
+      // Ensure IDs are prefixed
+      if (!record.id?.startsWith('reddit_')) {
+        record.id = `reddit_${record.id || Date.now()}`;
+      }
+      
+      // Normalize dates
+      if (record.created_at && typeof record.created_at === 'string') {
+        record.created_at = new Date(record.created_at);
+      }
+      
+      return record;
+    },
+    
+    afterRead: async (record) => {
+      // Parse dates
+      if (record.created_at && typeof record.created_at === 'string') {
+        record.created_at = new Date(record.created_at);
+      }
+      
+      return record;
+    }
+  }
+})
+.withMethods((vault) => ({
     posts: {
       async getTopPosts(limit: number = 10) {
         return vault.posts.find({ 
@@ -63,8 +88,8 @@ export const redditAdapter = defineAdapter({
         const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000);
         
         return all
-          .filter((post: any) => new Date(post.created_at) > cutoff)
-          .sort((a: any, b: any) => {
+          .filter((post) => new Date(post.created_at) > cutoff)
+          .sort((a, b) => {
             // Hot algorithm: score / age in hours
             const aAge = (Date.now() - new Date(a.created_at).getTime()) / (1000 * 60 * 60);
             const bAge = (Date.now() - new Date(b.created_at).getTime()) / (1000 * 60 * 60);
@@ -78,7 +103,7 @@ export const redditAdapter = defineAdapter({
         const all = await vault.posts.getAll();
         const searchTerm = query.toLowerCase();
         
-        return all.filter((post: any) => 
+        return all.filter((post) => 
           post.title?.toLowerCase().includes(searchTerm) ||
           post.selftext?.toLowerCase().includes(searchTerm)
         );
@@ -128,7 +153,7 @@ export const redditAdapter = defineAdapter({
     subreddits: {
       async getByName(name: string) {
         const all = await vault.subreddits.getAll();
-        return all.find((sub: any) => sub.name === name);
+        return all.find((sub) => sub.name === name);
       },
       
       async getPopular(limit: number = 10) {
@@ -143,37 +168,11 @@ export const redditAdapter = defineAdapter({
         const all = await vault.subreddits.getAll();
         const searchTerm = query.toLowerCase();
         
-        return all.filter((sub: any) =>
+        return all.filter((sub) =>
           sub.name?.toLowerCase().includes(searchTerm) ||
           sub.display_name?.toLowerCase().includes(searchTerm) ||
           sub.description?.toLowerCase().includes(searchTerm)
         );
       }
     }
-  }),
-  
-  hooks: {
-    beforeWrite: async (record) => {
-      // Ensure IDs are prefixed
-      if (!record.id?.startsWith('reddit_')) {
-        record.id = `reddit_${record.id || Date.now()}`;
-      }
-      
-      // Normalize dates
-      if (record.created_at && typeof record.created_at === 'string') {
-        record.created_at = new Date(record.created_at);
-      }
-      
-      return record;
-    },
-    
-    afterRead: async (record) => {
-      // Parse dates
-      if (record.created_at && typeof record.created_at === 'string') {
-        record.created_at = new Date(record.created_at);
-      }
-      
-      return record;
-    }
-  }
-} as const);
+  }));

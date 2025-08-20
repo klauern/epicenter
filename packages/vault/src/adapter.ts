@@ -1,13 +1,29 @@
-import type { AdapterConfig, SchemaDefinition } from './types';
+import type {
+	AdapterConfig,
+	SchemaDefinition,
+	VaultContext,
+	AdapterHooks,
+} from './types';
 
 /**
- * Define an adapter for the vault system
- * Adapters add schemas, methods, and hooks to extend vault functionality
- *
- * This is essentially an identity function that provides type inference
+ * Define an adapter with chainable methods
+ * First call: define id, name, schemas, and optional hooks
+ * Chain .withMethods() to add methods with properly typed vault context
  */
 export function defineAdapter<
-	const TSchemas extends Record<string, SchemaDefinition>,
->(config: AdapterConfig<TSchemas>): AdapterConfig<TSchemas> {
-	return config;
+	TSchemas extends Record<string, SchemaDefinition>,
+>(config: Omit<AdapterConfig<TSchemas>, 'methods'>) {
+	return {
+		...config,
+		withMethods(
+			methods: (vault: VaultContext<TSchemas>) => {
+				[K in keyof TSchemas]?: Record<string, (...args: any[]) => any>;
+			},
+		) {
+			return {
+				...config,
+				methods,
+			} satisfies AdapterConfig<TSchemas>;
+		},
+	};
 }
