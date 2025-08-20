@@ -22,18 +22,11 @@ export type AdapterHooks = {
 // Method context that gets passed to adapter methods
 export type MethodContext<TSchema extends SchemaDefinition> = BaseSubfolderMethods<TSchema>;
 
-// Vault context that methods receive - strongly typed based on schemas
-export type VaultContext<TSchemas extends Record<string, SchemaDefinition>> = {
-  [K in keyof TSchemas]: MethodContext<TSchemas[K]>
-};
-
 // Methods builder function that receives vault context
 // Uses the schemas to build a properly typed vault parameter
 export type MethodsBuilder<TSchemas extends Record<string, SchemaDefinition>> = (
-  vault: VaultContext<TSchemas>
-) => {
-  [K in keyof TSchemas]?: Record<string, (...args: any[]) => any>
-};
+  vault: { [K in keyof TSchemas]: MethodContext<TSchemas[K]> }
+) => { [K in keyof TSchemas]?: Record<string, (...args: any[]) => any> };
 
 export type AdapterConfig<
   TSchemas extends Record<string, SchemaDefinition> = Record<string, SchemaDefinition>

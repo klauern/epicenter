@@ -1,9 +1,4 @@
-import type {
-	AdapterConfig,
-	SchemaDefinition,
-	VaultContext,
-	AdapterHooks,
-} from './types';
+import type { AdapterConfig, MethodsBuilder, SchemaDefinition } from './types';
 
 /**
  * Define an adapter with chainable methods
@@ -15,15 +10,7 @@ export function defineAdapter<
 >(config: Omit<AdapterConfig<TSchemas>, 'methods'>) {
 	return {
 		...config,
-		withMethods(
-			methods: (vault: VaultContext<TSchemas>) => {
-				[K in keyof TSchemas]?: Record<string, (...args: any[]) => any>;
-			},
-		) {
-			return {
-				...config,
-				methods,
-			} satisfies AdapterConfig<TSchemas>;
-		},
+		withMethods: (methods: MethodsBuilder<TSchemas>) =>
+			({ ...config, methods }) satisfies AdapterConfig<TSchemas>,
 	};
 }
