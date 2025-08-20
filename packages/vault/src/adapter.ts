@@ -48,10 +48,6 @@ type AdapterHooks = {
  */
 export function defineAdapter<
 	TSchemas extends Record<string, SchemaDefinition>,
->(config: Omit<AdapterConfig<TSchemas>, 'methods'>) {
-	return {
-		...config,
-		withMethods: (methods: AdapterConfig<TSchemas>['methods']) =>
-			({ ...config, methods }) satisfies AdapterConfig<TSchemas>,
-	};
+>(config: AdapterConfig<TSchemas>) {
+	return config;
 }
