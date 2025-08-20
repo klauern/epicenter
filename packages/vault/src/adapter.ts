@@ -19,26 +19,24 @@ export type AdapterConfig<
 	) => {
 		[K in keyof TSchemas]?: Record<string, (...args: any[]) => any>;
 	};
-	hooks?: AdapterHooks;
-};
-
-type AdapterHooks = {
-	beforeRead?: (
-		record: MarkdownRecord,
-	) => MarkdownRecord | Promise<MarkdownRecord>;
-	afterRead?: (
-		record: MarkdownRecord,
-	) => MarkdownRecord | Promise<MarkdownRecord>;
-	beforeWrite?: (
-		record: MarkdownRecord,
-	) => MarkdownRecord | Promise<MarkdownRecord>;
-	afterWrite?: (
-		record: MarkdownRecord,
-	) => MarkdownRecord | Promise<MarkdownRecord>;
-	beforeSync?: (
-		records: MarkdownRecord[],
-	) => MarkdownRecord[] | Promise<MarkdownRecord[]>;
-	afterSync?: (records: MarkdownRecord[]) => void | Promise<void>;
+	hooks?: {
+		beforeRead?: (
+			record: MarkdownRecord,
+		) => MarkdownRecord | Promise<MarkdownRecord>;
+		afterRead?: (
+			record: MarkdownRecord,
+		) => MarkdownRecord | Promise<MarkdownRecord>;
+		beforeWrite?: (
+			record: MarkdownRecord,
+		) => MarkdownRecord | Promise<MarkdownRecord>;
+		afterWrite?: (
+			record: MarkdownRecord,
+		) => MarkdownRecord | Promise<MarkdownRecord>;
+		beforeSync?: (
+			records: MarkdownRecord[],
+		) => MarkdownRecord[] | Promise<MarkdownRecord[]>;
+		afterSync?: (records: MarkdownRecord[]) => void | Promise<void>;
+	};
 };
 
 /**
