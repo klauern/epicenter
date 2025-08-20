@@ -4,7 +4,16 @@ import type {
 	SchemaDefinition,
 } from './types';
 
-// Adapter configuration types
+/**
+ * Define an adapter for the vault system
+ * Provides type-safe adapter configuration with properly typed vault context in methods
+ */
+export function defineAdapter<
+	TSchemas extends Record<string, SchemaDefinition>,
+>(config: AdapterConfig<TSchemas>) {
+	return config;
+}
+
 export type AdapterConfig<
 	TSchemas extends Record<string, SchemaDefinition> = Record<
 		string,
@@ -38,14 +47,3 @@ export type AdapterConfig<
 		afterSync?: (records: MarkdownRecord[]) => void | Promise<void>;
 	};
 };
-
-/**
- * Define an adapter with chainable methods
- * First call: define id, name, schemas, and optional hooks
- * Chain .withMethods() to add methods with properly typed vault context
- */
-export function defineAdapter<
-	TSchemas extends Record<string, SchemaDefinition>,
->(config: AdapterConfig<TSchemas>) {
-	return config;
-}
