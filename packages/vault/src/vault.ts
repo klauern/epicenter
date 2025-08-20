@@ -2,8 +2,8 @@ import { readdir, readFile, writeFile, mkdir, unlink } from 'node:fs/promises';
 import { join } from 'node:path';
 import { existsSync } from 'node:fs';
 import matter from 'gray-matter';
+import type { AdapterConfig } from './adapter';
 import type {
-	AdapterConfig,
 	BuildVaultType,
 	VaultConfig,
 	MarkdownRecord,

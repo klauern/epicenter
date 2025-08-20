@@ -1,5 +1,7 @@
 // Core type definitions for the vault system
 
+import type { AdapterConfig } from './adapter';
+
 export type SchemaDefinition = {
 	[fieldName: string]: 'text' | 'number' | 'boolean' | 'json' | 'date';
 };
@@ -8,49 +10,6 @@ export type MarkdownRecord = {
 	id: string;
 	[key: string]: unknown;
 	content?: string;
-};
-
-export type AdapterHooks = {
-	beforeRead?: (
-		record: MarkdownRecord,
-	) => MarkdownRecord | Promise<MarkdownRecord>;
-	afterRead?: (
-		record: MarkdownRecord,
-	) => MarkdownRecord | Promise<MarkdownRecord>;
-	beforeWrite?: (
-		record: MarkdownRecord,
-	) => MarkdownRecord | Promise<MarkdownRecord>;
-	afterWrite?: (
-		record: MarkdownRecord,
-	) => MarkdownRecord | Promise<MarkdownRecord>;
-	beforeSync?: (
-		records: MarkdownRecord[],
-	) => MarkdownRecord[] | Promise<MarkdownRecord[]>;
-	afterSync?: (records: MarkdownRecord[]) => void | Promise<void>;
-};
-
-// Method context that gets passed to adapter methods
-export type MethodContext<TSchema extends SchemaDefinition> =
-	BaseSubfolderMethods<TSchema>;
-
-// Methods builder function that receives vault context
-// Uses the schemas to build a properly typed vault parameter
-export type MethodsBuilder<TSchemas extends Record<string, SchemaDefinition>> =
-	(vault: { [K in keyof TSchemas]: MethodContext<TSchemas[K]> }) => {
-		[K in keyof TSchemas]?: Record<string, (...args: any[]) => any>;
-	};
-
-export type AdapterConfig<
-	TSchemas extends Record<string, SchemaDefinition> = Record<
-		string,
-		SchemaDefinition
-	>,
-> = {
-	id: string;
-	name: string;
-	schemas: TSchemas;
-	methods?: MethodsBuilder<TSchemas>;
-	hooks?: AdapterHooks;
 };
 
 export type VaultConfig<TAdapters extends readonly AdapterConfig[]> = {

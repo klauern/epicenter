@@ -1,4 +1,45 @@
-import type { AdapterConfig, MethodsBuilder, SchemaDefinition } from './types';
+import type {
+	BaseSubfolderMethods,
+	MarkdownRecord,
+	SchemaDefinition,
+} from './types';
+
+// Adapter configuration types
+export type AdapterConfig<
+	TSchemas extends Record<string, SchemaDefinition> = Record<
+		string,
+		SchemaDefinition
+	>,
+> = {
+	id: string;
+	name: string;
+	schemas: TSchemas;
+	methods?: (
+		vault: { [K in keyof TSchemas]: BaseSubfolderMethods<TSchemas[K]> },
+	) => {
+		[K in keyof TSchemas]?: Record<string, (...args: any[]) => any>;
+	};
+	hooks?: AdapterHooks;
+};
+
+type AdapterHooks = {
+	beforeRead?: (
+		record: MarkdownRecord,
+	) => MarkdownRecord | Promise<MarkdownRecord>;
+	afterRead?: (
+		record: MarkdownRecord,
+	) => MarkdownRecord | Promise<MarkdownRecord>;
+	beforeWrite?: (
+		record: MarkdownRecord,
+	) => MarkdownRecord | Promise<MarkdownRecord>;
+	afterWrite?: (
+		record: MarkdownRecord,
+	) => MarkdownRecord | Promise<MarkdownRecord>;
+	beforeSync?: (
+		records: MarkdownRecord[],
+	) => MarkdownRecord[] | Promise<MarkdownRecord[]>;
+	afterSync?: (records: MarkdownRecord[]) => void | Promise<void>;
+};
 
 /**
  * Define an adapter with chainable methods
@@ -10,7 +51,7 @@ export function defineAdapter<
 >(config: Omit<AdapterConfig<TSchemas>, 'methods'>) {
 	return {
 		...config,
-		withMethods: (methods: MethodsBuilder<TSchemas>) =>
+		withMethods: (methods: AdapterConfig<TSchemas>['methods']) =>
 			({ ...config, methods }) satisfies AdapterConfig<TSchemas>,
 	};
 }
