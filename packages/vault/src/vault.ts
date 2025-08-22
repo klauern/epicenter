@@ -25,44 +25,50 @@ export function defineVault<const TAdapters extends readonly AdapterConfig[]>(
 	}
 
 	// Collect all schemas from adapters
-	const allSchemas = config.adapters.reduce((acc, adapter) => {
-		for (const [name, schema] of Object.entries(adapter.schemas)) {
-			acc[name] = acc[name] || schema; // Use first schema if duplicates
-		}
-		return acc;
-	}, {} as Record<string, SchemaDefinition>);
+	const allSchemas = config.adapters.reduce<Record<string, SchemaDefinition>>(
+		(acc, adapter) => {
+			for (const [name, schema] of Object.entries(adapter.schemas)) {
+				acc[name] = acc[name] || schema; // Use first schema if duplicates
+			}
+			return acc;
+		},
+		{},
+	);
 
 	// Build subfolders with base methods
 	const baseSubfolders = Object.fromEntries(
 		Object.entries(allSchemas).map(([name, schema]) => [
 			name,
-			createSubfolderMethods(config.path, name, schema)
-		])
+			createSubfolderMethods(config.path, name, schema),
+		]),
 	);
 
 	// Apply custom methods from each adapter
-	const subfolders = config.adapters.reduce((acc, adapter) => {
-		if (!adapter.methods) return acc;
+	const subfolders = config.adapters.reduce(
+		(acc, adapter) => {
+			if (!adapter.methods) return acc;
 
-		// Build vault context with only this adapter's subfolders
-		const vaultContext = Object.fromEntries(
-			Object.keys(adapter.schemas)
-				.filter(key => acc[key])
-				.map(key => [key, acc[key]])
-		);
+			// Build vault context with only this adapter's subfolders
+			const vaultContext = Object.fromEntries(
+				Object.keys(adapter.schemas)
+					.filter((key) => acc[key])
+					.map((key) => [key, acc[key]]),
+			);
 
-		// Get and merge custom methods
-		const customMethods = adapter.methods(vaultContext) || {};
-		
-		// Merge methods into subfolders
-		for (const [name, methods] of Object.entries(customMethods)) {
-			if (acc[name] && methods) {
-				Object.assign(acc[name], methods);
+			// Get and merge custom methods
+			const customMethods = adapter.methods(vaultContext) || {};
+
+			// Merge methods into subfolders
+			for (const [name, methods] of Object.entries(customMethods)) {
+				if (acc[name] && methods) {
+					Object.assign(acc[name], methods);
+				}
 			}
-		}
-		
-		return acc;
-	}, { ...baseSubfolders });
+
+			return acc;
+		},
+		{ ...baseSubfolders },
+	);
 
 	// Build the vault object in one go using spread syntax
 	const vault = {
@@ -166,7 +172,9 @@ function createSubfolderMethods<TSchema extends SchemaDefinition>(
 			return records.filter(Boolean) as InferRecord<TSchema>[];
 		},
 
-		async create(record: Omit<InferRecord<TSchema>, 'id'>): Promise<InferRecord<TSchema>> {
+		async create(
+			record: Omit<InferRecord<TSchema>, 'id'>,
+		): Promise<InferRecord<TSchema>> {
 			const id = `${subfolder}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 			const { content = '', ...frontMatter } = record as any;
 
@@ -182,7 +190,10 @@ function createSubfolderMethods<TSchema extends SchemaDefinition>(
 			} as InferRecord<TSchema>;
 		},
 
-		async update(id: string, updates: Partial<InferRecord<TSchema>>): Promise<InferRecord<TSchema>> {
+		async update(
+			id: string,
+			updates: Partial<InferRecord<TSchema>>,
+		): Promise<InferRecord<TSchema>> {
 			const existing = await this.getById(id);
 			if (!existing) throw new Error(`Record ${id} not found`);
 
@@ -239,7 +250,10 @@ function createSubfolderMethods<TSchema extends SchemaDefinition>(
 			return all.length;
 		},
 
-		async where<K extends keyof TSchema>(field: K, value: InferFieldType<TSchema[K]>): Promise<InferRecord<TSchema>[]> {
+		async where<K extends keyof TSchema>(
+			field: K,
+			value: InferFieldType<TSchema[K]>,
+		): Promise<InferRecord<TSchema>[]> {
 			const all = await this.getAll();
 			return all.filter((record) => (record as any)[field] === value);
 		},
