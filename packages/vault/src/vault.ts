@@ -28,8 +28,8 @@ export function defineVault<const TAdapters extends readonly AdapterConfig[]>(
 	const vault = config.adapters.reduce<BuildVaultType<TAdapters>>(
 		(accumulator, adapter) => {
 			// Process each schema in this adapter
-			for (const [schemaName, schema] of Object.entries(adapter.schemas)) {
-				const prefixedName = `${adapter.id}_${schemaName}`;
+			for (const [tableName, schema] of Object.entries(adapter.schemas)) {
+				const prefixedName = `${adapter.id}_${tableName}` as const;
 
 				// Create base methods for this subfolder
 				accumulator[prefixedName] = createSubfolderMethods(
