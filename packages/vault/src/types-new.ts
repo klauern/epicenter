@@ -1,0 +1,198 @@
+import type { PluginConfig } from './plugin';
+
+// Field type definitions
+export type FieldType =
+	| 'string'
+	| 'number'
+	| 'boolean'
+	| 'date'
+	| 'object'
+	| 'string[]'
+	| 'number[]'
+	| 'boolean[]';
+
+export type FieldDefinition = {
+	type: FieldType;
+	required?: boolean;
+	default?: any;
+	unique?: boolean;
+	references?: string; // Foreign key reference
+};
+
+export type SchemaDefinition = Record<string, FieldDefinition>;
+
+// Infer TypeScript type from field definition
+export type InferFieldType<T extends FieldDefinition> = T['type'] extends 'string'
+	? string
+	: T['type'] extends 'number'
+	? number
+	: T['type'] extends 'boolean'
+	? boolean
+	: T['type'] extends 'date'
+	? Date
+	: T['type'] extends 'object'
+	? Record<string, any>
+	: T['type'] extends 'string[]'
+	? string[]
+	: T['type'] extends 'number[]'
+	? number[]
+	: T['type'] extends 'boolean[]'
+	? boolean[]
+	: never;
+
+// Infer record type from schema
+export type InferRecord<TSchema extends SchemaDefinition> = {
+	id: string;
+	content?: string;
+} & {
+	[K in keyof TSchema as TSchema[K]['required'] extends true ? K : never]: InferFieldType<TSchema[K]>;
+} & {
+	[K in keyof TSchema as TSchema[K]['required'] extends true ? never : K]?: InferFieldType<TSchema[K]>;
+};
+
+// Standard CRUD methods for tables (following the new API pattern)
+export type BaseTableMethods<TSchema extends SchemaDefinition> = {
+	/**
+	 * Get a single record by ID
+	 * @example vault.reddit.posts.get({ id: 'post_123' })
+	 */
+	get(params: { id: string }): Promise<InferRecord<TSchema> | null>;
+	
+	/**
+	 * List all records in the table
+	 * @example vault.reddit.posts.list()
+	 */
+	list(params?: {
+		where?: Partial<InferRecord<TSchema>>;
+		orderBy?: keyof InferRecord<TSchema>;
+		order?: 'asc' | 'desc';
+		limit?: number;
+		offset?: number;
+	}): Promise<InferRecord<TSchema>[]>;
+	
+	/**
+	 * Create a new record
+	 * @example vault.reddit.posts.create({ title: 'Hello', content: 'World' })
+	 */
+	create(record: Omit<InferRecord<TSchema>, 'id'>): Promise<InferRecord<TSchema>>;
+	
+	/**
+	 * Update an existing record
+	 * @example vault.reddit.posts.update({ id: 'post_123', title: 'Updated' })
+	 */
+	update(params: { id: string } & Partial<InferRecord<TSchema>>): Promise<InferRecord<TSchema>>;
+	
+	/**
+	 * Delete a record
+	 * @example vault.reddit.posts.delete({ id: 'post_123' })
+	 */
+	delete(params: { id: string }): Promise<boolean>;
+	
+	/**
+	 * Count records in the table
+	 * @example vault.reddit.posts.count()
+	 */
+	count(params?: { where?: Partial<InferRecord<TSchema>> }): Promise<number>;
+	
+	/**
+	 * Check if a record exists
+	 * @example vault.reddit.posts.exists({ id: 'post_123' })
+	 */
+	exists(params: { id: string }): Promise<boolean>;
+};
+
+// Vault configuration
+export type VaultConfig<TPlugins extends readonly PluginConfig[]> = {
+	/**
+	 * Path to the vault directory
+	 */
+	path: string;
+	
+	/**
+	 * Plugins to load into the vault
+	 */
+	plugins: TPlugins;
+	
+	/**
+	 * Optional SQLite configuration
+	 */
+	sqlite?: {
+		enabled: boolean;
+		path?: string;
+		syncInterval?: number;
+	};
+};
+
+// Core vault methods
+export type VaultCoreMethods = {
+	/**
+	 * Sync all data to SQLite
+	 */
+	sync(): Promise<void>;
+	
+	/**
+	 * Refresh vault from disk
+	 */
+	refresh(): Promise<void>;
+	
+	/**
+	 * Export vault data
+	 */
+	export(format: 'json' | 'sql' | 'markdown'): Promise<string>;
+	
+	/**
+	 * Get vault statistics
+	 */
+	stats(): Promise<{
+		plugins: number;
+		tables: number;
+		totalRecords: number;
+		tableStats: Record<string, number>;
+		lastSync: Date | null;
+	}>;
+	
+	/**
+	 * Execute SQL query (when SQLite is enabled)
+	 */
+	query<T = any>(sql: string): Promise<T[]>;
+};
+
+// Helper type to extract custom table methods from plugin
+type ExtractTableMethods<
+	P extends PluginConfig,
+	TName extends keyof P['tables']
+> = P['methods'] extends (...args: any[]) => infer R
+	? R extends { [K in TName]: infer M }
+		? M extends Record<string, (...args: any[]) => any>
+			? M
+			: {}
+		: {}
+	: {};
+
+// Helper type to extract plugin-level methods
+type ExtractPluginMethods<P extends PluginConfig> = P['methods'] extends (...args: any[]) => infer R
+	? R extends { plugin: infer M }
+		? M extends Record<string, (...args: any[]) => any>
+			? M
+			: {}
+		: {}
+	: {};
+
+// Build the type for a single plugin in the vault
+export type BuildPluginType<P extends PluginConfig> = {
+	[TName in keyof P['tables']]: BaseTableMethods<P['tables'][TName]> & 
+		ExtractTableMethods<P, TName>;
+} & ExtractPluginMethods<P>;
+
+// Build the complete vault type
+export type BuildVaultType<TPlugins extends readonly PluginConfig[]> = VaultCoreMethods & {
+	[P in TPlugins[number] as P['id']]: BuildPluginType<P>;
+};
+
+// Markdown record type (for storage)
+export type MarkdownRecord = {
+	id: string;
+	frontMatter: Record<string, any>;
+	content: string;
+	path: string;
+};
