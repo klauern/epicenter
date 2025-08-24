@@ -1,147 +1,124 @@
 import { readdir, readFile, writeFile, mkdir, unlink } from 'node:fs/promises';
-import { join } from 'node:path';
-import { existsSync } from 'node:fs';
+import { existsSync, mkdirSync } from 'node:fs';
 import matter from 'gray-matter';
-import type { AdapterConfig } from './adapter';
+import type { PluginConfig } from './plugin';
 import type {
 	BuildVaultType,
 	VaultConfig,
-	MarkdownRecord,
-	BaseSubfolderMethods,
+	BaseTableMethods,
 	InferRecord,
-	InferFieldType,
 	SchemaDefinition,
+	VaultCoreMethods,
 } from './types';
+import {
+	getPluginPath,
+	getTablePath,
+	getSQLiteTableName,
+	generateRecordId,
+	getRecordPath,
+	parseRecordFilename,
+	isMarkdownFile,
+} from './utils';
 
 /**
- * Define a vault with adapters - optimized single-pass implementation
+ * Define a vault with plugins using clean architecture
+ * 
+ * No redundant data structures - everything is derived from config
  */
-export function defineVault<const TAdapters extends readonly AdapterConfig[]>(
-	config: VaultConfig<TAdapters>,
-): BuildVaultType<TAdapters> {
-	// Ensure vault directory exists
+export function defineVault<const TPlugins extends readonly PluginConfig[]>(
+	config: VaultConfig<TPlugins>,
+): BuildVaultType<TPlugins> {
+	// Ensure vault directory exists synchronously
 	if (!existsSync(config.path)) {
-		mkdir(config.path, { recursive: true });
+		mkdirSync(config.path, { recursive: true });
 	}
 
-	// Build vault in a single pass through adapters
-	const vault = config.adapters.reduce<BuildVaultType<TAdapters>>(
-		(accumulator, adapter) => {
-			// Process each schema in this adapter
-			for (const [tableName, schema] of Object.entries(adapter.schemas)) {
-				const prefixedName = `${adapter.id}_${tableName}` as const;
+	// Build vault with nested structure
+	const vault: any = {};
 
-				// Create base methods for this subfolder
-				accumulator[prefixedName] = createSubfolderMethods(
-					config.path,
-					prefixedName,
-					schema,
-				);
+	// Process each plugin
+	for (const plugin of config.plugins) {
+		const pluginPath = getPluginPath(config.path, plugin.id);
+		
+		// Ensure plugin directory exists synchronously
+		if (!existsSync(pluginPath)) {
+			mkdirSync(pluginPath, { recursive: true });
+		}
+
+		// Create plugin object
+		const pluginObj: any = {};
+
+		// Create table methods for each table in the plugin
+		for (const [tableName, schema] of Object.entries(plugin.tables)) {
+			const tablePath = getTablePath(config.path, plugin.id, tableName);
+			const sqliteTableName = getSQLiteTableName(plugin.id, tableName);
+			
+			// Ensure table directory exists synchronously
+			if (!existsSync(tablePath)) {
+				mkdirSync(tablePath, { recursive: true });
 			}
 
-			// Add custom methods if adapter has them
-			if (adapter.methods) {
-				// Build vault context that maps original names to prefixed subfolders
-				const vaultContext: Record<string, any> = {};
-				for (const schemaName of Object.keys(adapter.schemas)) {
-					vaultContext[schemaName] = accumulator[`${adapter.id}_${schemaName}`];
-				}
+			// Create base CRUD methods for this table
+			pluginObj[tableName] = createTableMethods(
+				config.path,
+				plugin.id,
+				tableName,
+				schema
+			);
+		}
 
-				// Get custom methods from adapter
-				const customMethods = adapter.methods(vaultContext) || {};
+		// Add custom methods if plugin defines them
+		if (plugin.methods) {
+			// Build context with access to plugin's tables
+			const vaultContext: Record<string, BaseTableMethods<any>> = {};
+			for (const tableName of Object.keys(plugin.tables)) {
+				vaultContext[tableName] = pluginObj[tableName];
+			}
 
-				// Merge custom methods into the appropriate subfolders
-				for (const [schemaName, methods] of Object.entries(customMethods)) {
-					const prefixedName = `${adapter.id}_${schemaName}`;
-					if (accumulator[prefixedName] && methods) {
-						Object.assign(accumulator[prefixedName], methods);
-					}
+			// Get custom methods from plugin
+			const customMethods = plugin.methods(vaultContext) || {};
+
+			// Apply table-specific custom methods
+			for (const [tableName, methods] of Object.entries(customMethods)) {
+				if (tableName !== 'plugin' && pluginObj[tableName] && methods) {
+					Object.assign(pluginObj[tableName], methods);
 				}
 			}
 
-			return accumulator;
-		},
-		{
-			// Initialize with core vault methods
-			async sync() {
-				console.log('Syncing vault to SQLite...');
-				// In a real implementation, this would sync markdown files to SQLite
-			},
-
-			async refresh() {
-				console.log('Refreshing vault from disk...');
-				// Reload all markdown files
-			},
-
-			async export(format: 'json' | 'sql') {
-				console.log(`Exporting vault as ${format}...`);
-
-				if (format === 'json') {
-					const allData: Record<string, any[]> = {};
-
-					// Get all subfolders (those with a getAll method)
-					for (const [name, value] of Object.entries(this)) {
-						if (typeof value === 'object' && value && 'getAll' in value) {
-							const subfolder = value as BaseSubfolderMethods<any>;
-							allData[name] = await subfolder.getAll();
-						}
-					}
-
-					return JSON.stringify(allData, null, 2);
+			// Apply plugin-level methods
+			if (customMethods.plugin) {
+				for (const [methodName, method] of Object.entries(customMethods.plugin)) {
+					pluginObj[methodName] = method;
 				}
+			}
+		}
 
-				return '-- SQL export not implemented yet';
-			},
+		// Add plugin to vault
+		vault[plugin.id] = pluginObj;
+	}
 
-			async stats() {
-				let subfolderCount = 0;
-				let totalRecords = 0;
+	// Add core vault methods
+	Object.assign(vault, createCoreVaultMethods(config, vault));
 
-				// Count all subfolders and their records
-				for (const value of Object.values(this)) {
-					if (typeof value === 'object' && value && 'count' in value) {
-						const subfolder = value as BaseSubfolderMethods<any>;
-						subfolderCount++;
-						totalRecords += await subfolder.count();
-					}
-				}
-
-				return {
-					subfolders: subfolderCount,
-					totalRecords,
-					lastSync: null,
-				};
-			},
-
-			async query(sql: string) {
-				console.log('Executing SQL query:', sql);
-				// In a real implementation, this would query the SQLite database
-				return [];
-			},
-		},
-	);
-
-	return vault as BuildVaultType<TAdapters>;
+	return vault as BuildVaultType<TPlugins>;
 }
 
 /**
- * Create base CRUD methods for a subfolder
+ * Create standard CRUD methods for a table
  */
-function createSubfolderMethods<TSchema extends SchemaDefinition>(
+function createTableMethods<TSchema extends SchemaDefinition>(
 	vaultPath: string,
-	subfolder: string,
+	pluginId: string,
+	tableName: string,
 	schema: TSchema,
-): BaseSubfolderMethods<TSchema> {
-	const subfolderPath = join(vaultPath, subfolder);
-
-	// Ensure subfolder exists
-	if (!existsSync(subfolderPath)) {
-		mkdir(subfolderPath, { recursive: true });
-	}
+): BaseTableMethods<TSchema> {
+	// Derive paths once
+	const tablePath = getTablePath(vaultPath, pluginId, tableName);
+	const sqliteTableName = getSQLiteTableName(pluginId, tableName);
 
 	return {
-		async getById(id: string): Promise<InferRecord<TSchema> | null> {
-			const filePath = join(subfolderPath, `${id}.md`);
+		async get({ id }: { id: string }): Promise<InferRecord<TSchema> | null> {
+			const filePath = getRecordPath(vaultPath, pluginId, tableName, id);
 			if (!existsSync(filePath)) return null;
 
 			const content = await readFile(filePath, 'utf-8');
@@ -154,106 +131,220 @@ function createSubfolderMethods<TSchema extends SchemaDefinition>(
 			} as InferRecord<TSchema>;
 		},
 
-		async getAll(): Promise<InferRecord<TSchema>[]> {
-			if (!existsSync(subfolderPath)) return [];
+		async list(): Promise<InferRecord<TSchema>[]> {
+			if (!existsSync(tablePath)) return [];
 
-			const files = await readdir(subfolderPath);
-			const mdFiles = files.filter((f) => f.endsWith('.md'));
+			const files = await readdir(tablePath);
+			const mdFiles = files.filter(isMarkdownFile);
 
 			const records = await Promise.all(
 				mdFiles.map(async (file) => {
-					const id = file.replace('.md', '');
-					return this.getById(id);
+					const id = parseRecordFilename(file);
+					return this.get({ id });
 				}),
 			);
 
 			return records.filter(Boolean) as InferRecord<TSchema>[];
 		},
 
-		async create(
-			record: Omit<InferRecord<TSchema>, 'id'>,
-		): Promise<InferRecord<TSchema>> {
-			const id = `${subfolder}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-			const { content = '', ...frontMatter } = record as any;
+		async create(record: Omit<InferRecord<TSchema>, 'id'>): Promise<InferRecord<TSchema>> {
+			const id = generateRecordId(sqliteTableName);
+			const { content = '', ...providedData } = record as any;
 
-			const fileContent = matter.stringify(content, { ...frontMatter, id });
-			const filePath = join(subfolderPath, `${id}.md`);
+			// Apply default values from schema
+			const dataWithDefaults: any = {};
+			for (const [fieldName, fieldDef] of Object.entries(schema)) {
+				if (providedData[fieldName] !== undefined) {
+					dataWithDefaults[fieldName] = providedData[fieldName];
+				} else if (fieldDef.default !== undefined) {
+					dataWithDefaults[fieldName] = fieldDef.default;
+				}
+			}
+
+			const fileContent = matter.stringify(content, { ...dataWithDefaults, id });
+			const filePath = getRecordPath(vaultPath, pluginId, tableName, id);
 
 			await writeFile(filePath, fileContent);
 
 			return {
-				...frontMatter,
+				...dataWithDefaults,
 				id,
 				content,
 			} as InferRecord<TSchema>;
 		},
 
-		async update(
-			id: string,
-			updates: Partial<InferRecord<TSchema>>,
-		): Promise<InferRecord<TSchema>> {
-			const existing = await this.getById(id);
-			if (!existing) throw new Error(`Record ${id} not found`);
+		async update({ id, ...updates }: { id: string } & Partial<InferRecord<TSchema>>): Promise<InferRecord<TSchema>> {
+			const existing = await this.get({ id });
+			if (!existing) {
+				throw new Error(`Record ${id} not found in ${sqliteTableName}`);
+			}
 
 			const { content = existing.content, ...frontMatter } = updates as any;
 			const updated = { ...existing, ...frontMatter, content };
 
 			const fileContent = matter.stringify(content, { ...frontMatter, id });
-			const filePath = join(subfolderPath, `${id}.md`);
+			const filePath = getRecordPath(vaultPath, pluginId, tableName, id);
 
 			await writeFile(filePath, fileContent);
 
 			return updated as InferRecord<TSchema>;
 		},
 
-		async delete(id: string): Promise<boolean> {
-			const filePath = join(subfolderPath, `${id}.md`);
+		async delete({ id }: { id: string }): Promise<boolean> {
+			const filePath = getRecordPath(vaultPath, pluginId, tableName, id);
 			if (!existsSync(filePath)) return false;
 
 			await unlink(filePath);
 			return true;
 		},
 
-		async find(query: any): Promise<InferRecord<TSchema>[]> {
-			const all = await this.getAll();
-			let result = [...all];
-
-			// Simple query implementation
-			if (query.where) {
-				result = result.filter((record) => {
-					return Object.entries(query.where).every(
-						([key, value]) => (record as any)[key] === value,
-					);
-				});
-			}
-
-			if (query.orderBy) {
-				result.sort((a, b) => {
-					const aVal = (a as any)[query.orderBy];
-					const bVal = (b as any)[query.orderBy];
-					const order = query.order === 'desc' ? -1 : 1;
-					return aVal > bVal ? order : -order;
-				});
-			}
-
-			if (query.limit) {
-				return result.slice(0, query.limit);
-			}
-
-			return result;
-		},
-
 		async count(): Promise<number> {
-			const all = await this.getAll();
-			return all.length;
+			const results = await this.list();
+			return results.length;
 		},
 
-		async where<K extends keyof TSchema>(
-			field: K,
-			value: InferFieldType<TSchema[K]>,
-		): Promise<InferRecord<TSchema>[]> {
-			const all = await this.getAll();
-			return all.filter((record) => (record as any)[field] === value);
+		async exists({ id }: { id: string }): Promise<boolean> {
+			const filePath = getRecordPath(vaultPath, pluginId, tableName, id);
+			return existsSync(filePath);
+		},
+	};
+}
+
+/**
+ * Create core vault methods - simplified without redundant Map
+ */
+function createCoreVaultMethods(
+	config: VaultConfig<any>,
+	vault: any,
+): VaultCoreMethods {
+	return {
+		async sync() {
+			console.log('Syncing vault to SQLite...');
+			
+			// Iterate config directly - no Map needed!
+			for (const plugin of config.plugins) {
+				for (const tableName of Object.keys(plugin.tables)) {
+					const sqliteTableName = getSQLiteTableName(plugin.id, tableName);
+					console.log(`  Syncing table: ${sqliteTableName}`);
+					
+					// TODO: Actual SQLite sync
+					// 1. Create table ${sqliteTableName}
+					// 2. Read from ${getTablePath(config.path, plugin.id, tableName)}
+					// 3. Insert into SQLite
+				}
+			}
+		},
+
+		async refresh() {
+			console.log('Refreshing vault from disk...');
+			// Just iterate the config - we can derive all paths
+			for (const plugin of config.plugins) {
+				const pluginPath = getPluginPath(config.path, plugin.id);
+				console.log(`  Refreshing plugin: ${plugin.id} from ${pluginPath}`);
+			}
+		},
+
+		async export(format: 'json' | 'sql' | 'markdown') {
+			console.log(`Exporting vault as ${format}...`);
+
+			if (format === 'json') {
+				const result: Record<string, any> = {};
+				
+				// Just iterate config - no Map needed
+				for (const plugin of config.plugins) {
+					result[plugin.id] = {};
+					
+					for (const tableName of Object.keys(plugin.tables)) {
+						const table = vault[plugin.id][tableName];
+						if (table && typeof table.list === 'function') {
+							result[plugin.id][tableName] = await table.list();
+						}
+					}
+				}
+
+				return JSON.stringify(result, null, 2);
+			}
+
+			if (format === 'sql') {
+				const statements: string[] = [];
+				
+				// Generate CREATE TABLE statements from config
+				for (const plugin of config.plugins) {
+					for (const tableName of Object.keys(plugin.tables)) {
+						const sqliteTableName = getSQLiteTableName(plugin.id, tableName);
+						
+						statements.push(`-- Plugin: ${plugin.id}, Table: ${tableName}`);
+						statements.push(`CREATE TABLE IF NOT EXISTS ${sqliteTableName} (`);
+						statements.push(`  id TEXT PRIMARY KEY,`);
+						statements.push(`  content TEXT,`);
+						statements.push(`  created_at DATETIME DEFAULT CURRENT_TIMESTAMP`);
+						// TODO: Add columns based on schema
+						statements.push(`);`);
+						statements.push('');
+					}
+				}
+
+				return statements.join('\n');
+			}
+
+			if (format === 'markdown') {
+				let output = '# Vault Export\n\n';
+				
+				for (const plugin of config.plugins) {
+					output += `## Plugin: ${plugin.name} (${plugin.id})\n\n`;
+					
+					for (const tableName of Object.keys(plugin.tables)) {
+						const table = vault[plugin.id][tableName];
+						if (table && typeof table.list === 'function') {
+							const records = await table.list();
+							output += `### Table: ${tableName} (${records.length} records)\n\n`;
+							
+							// Show table path for clarity
+							const tablePath = getTablePath(config.path, plugin.id, tableName);
+							output += `Path: \`${tablePath}\`\n\n`;
+						}
+					}
+				}
+
+				return output;
+			}
+
+			return '-- Export format not implemented';
+		},
+
+		async stats() {
+			const tableStats: Record<string, number> = {};
+			let totalRecords = 0;
+
+			// Simple iteration of config - derive everything else
+			for (const plugin of config.plugins) {
+				for (const tableName of Object.keys(plugin.tables)) {
+					const table = vault[plugin.id][tableName];
+					if (table && typeof table.count === 'function') {
+						const count = await table.count();
+						const key = `${plugin.id}.${tableName}`;
+						tableStats[key] = count;
+						totalRecords += count;
+					}
+				}
+			}
+
+			return {
+				plugins: config.plugins.length,
+				tables: Object.keys(tableStats).length,
+				totalRecords,
+				tableStats,
+				lastSync: null,
+			};
+		},
+
+		async query<T = any>(sql: string): Promise<T[]> {
+			console.log('Executing SQL query:', sql);
+			
+			// When we implement this, table names will be pluginId_tableName
+			// We can use getSQLiteTableName() to generate them
+			
+			return [];
 		},
 	};
 }

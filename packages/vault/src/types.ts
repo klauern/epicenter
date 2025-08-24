@@ -1,130 +1,192 @@
-// Core type definitions for the vault system
+import type { PluginConfig } from './plugin';
 
-import type { AdapterConfig } from './adapter';
+// Field type definitions
+export type FieldType =
+	| 'string'
+	| 'number'
+	| 'boolean'
+	| 'date'
+	| 'object'
+	| 'string[]'
+	| 'number[]'
+	| 'boolean[]';
 
-export type SchemaDefinition = {
-	[fieldName: string]: 'text' | 'number' | 'boolean' | 'json' | 'date';
+export type FieldDefinition = {
+	type: FieldType;
+	required?: boolean;
+	default?: any;
+	unique?: boolean;
+	references?: string; // Foreign key reference
 };
 
-export type MarkdownRecord = {
-	id: string;
-	[key: string]: unknown;
-	content?: string;
-};
+export type SchemaDefinition = Record<string, FieldDefinition>;
 
-export type VaultConfig<TAdapters extends readonly AdapterConfig[]> = {
-	path: string;
-	adapters: TAdapters;
-	database?: {
-		path?: string;
-		options?: any;
-	};
-	sync?: {
-		auto?: boolean;
-		interval?: number;
-		strategy?: 'immediate' | 'batch' | 'manual';
-	};
-	cache?: {
-		enabled?: boolean;
-		ttl?: number;
-	};
-};
-
-// Type inference utilities
-export type InferFieldType<T> = T extends 'text'
+// Infer TypeScript type from field definition
+export type InferFieldType<T extends FieldDefinition> = T['type'] extends 'string'
 	? string
-	: T extends 'number'
-		? number
-		: T extends 'boolean'
-			? boolean
-			: T extends 'date'
-				? Date
-				: T extends 'json'
-					? any
-					: unknown;
+	: T['type'] extends 'number'
+	? number
+	: T['type'] extends 'boolean'
+	? boolean
+	: T['type'] extends 'date'
+	? Date
+	: T['type'] extends 'object'
+	? Record<string, any>
+	: T['type'] extends 'string[]'
+	? string[]
+	: T['type'] extends 'number[]'
+	? number[]
+	: T['type'] extends 'boolean[]'
+	? boolean[]
+	: never;
 
+// Infer record type from schema
 export type InferRecord<TSchema extends SchemaDefinition> = {
 	id: string;
 	content?: string;
 } & {
-	[K in keyof TSchema]: InferFieldType<TSchema[K]>;
+	[K in keyof TSchema as TSchema[K]['required'] extends true ? K : never]: InferFieldType<TSchema[K]>;
+} & {
+	[K in keyof TSchema as TSchema[K]['required'] extends true ? never : K]?: InferFieldType<TSchema[K]>;
 };
 
-// Base methods every subfolder gets
-export type BaseSubfolderMethods<TSchema extends SchemaDefinition> = {
-	getById(id: string): Promise<InferRecord<TSchema> | null>;
-	getAll(): Promise<InferRecord<TSchema>[]>;
-	create(
-		record: Omit<InferRecord<TSchema>, 'id'>,
-	): Promise<InferRecord<TSchema>>;
-	update(
-		id: string,
-		updates: Partial<InferRecord<TSchema>>,
-	): Promise<InferRecord<TSchema>>;
-	delete(id: string): Promise<boolean>;
-	find(query: any): Promise<InferRecord<TSchema>[]>;
+// Standard CRUD methods for tables (following the new API pattern)
+export type BaseTableMethods<TSchema extends SchemaDefinition> = {
+	/**
+	 * Get a single record by ID
+	 * @example vault.reddit.posts.get({ id: 'post_123' })
+	 */
+	get(params: { id: string }): Promise<InferRecord<TSchema> | null>;
+	
+	/**
+	 * List all records in the table
+	 * @example vault.reddit.posts.list()
+	 */
+	list(): Promise<InferRecord<TSchema>[]>;
+	
+	/**
+	 * Create a new record
+	 * @example vault.reddit.posts.create({ title: 'Hello', content: 'World' })
+	 */
+	create(record: Omit<InferRecord<TSchema>, 'id'>): Promise<InferRecord<TSchema>>;
+	
+	/**
+	 * Update an existing record
+	 * @example vault.reddit.posts.update({ id: 'post_123', title: 'Updated' })
+	 */
+	update(params: { id: string } & Partial<InferRecord<TSchema>>): Promise<InferRecord<TSchema>>;
+	
+	/**
+	 * Delete a record
+	 * @example vault.reddit.posts.delete({ id: 'post_123' })
+	 */
+	delete(params: { id: string }): Promise<boolean>;
+	
+	/**
+	 * Count records in the table
+	 * @example vault.reddit.posts.count()
+	 */
 	count(): Promise<number>;
-	where<K extends keyof TSchema>(
-		field: K,
-		value: InferFieldType<TSchema[K]>,
-	): Promise<InferRecord<TSchema>[]>;
+	
+	/**
+	 * Check if a record exists
+	 * @example vault.reddit.posts.exists({ id: 'post_123' })
+	 */
+	exists(params: { id: string }): Promise<boolean>;
 };
 
-// Vault core methods
+// Vault configuration
+export type VaultConfig<TPlugins extends readonly PluginConfig[]> = {
+	/**
+	 * Path to the vault directory
+	 */
+	path: string;
+	
+	/**
+	 * Plugins to load into the vault
+	 */
+	plugins: TPlugins;
+	
+	/**
+	 * Optional SQLite configuration
+	 */
+	sqlite?: {
+		enabled: boolean;
+		path?: string;
+		syncInterval?: number;
+	};
+};
+
+// Core vault methods
 export type VaultCoreMethods = {
+	/**
+	 * Sync all data to SQLite
+	 */
 	sync(): Promise<void>;
+	
+	/**
+	 * Refresh vault from disk
+	 */
 	refresh(): Promise<void>;
-	export(format: 'json' | 'sql'): Promise<string>;
+	
+	/**
+	 * Export vault data
+	 */
+	export(format: 'json' | 'sql' | 'markdown'): Promise<string>;
+	
+	/**
+	 * Get vault statistics
+	 */
 	stats(): Promise<{
-		subfolders: number;
+		plugins: number;
+		tables: number;
 		totalRecords: number;
+		tableStats: Record<string, number>;
 		lastSync: Date | null;
 	}>;
+	
+	/**
+	 * Execute SQL query (when SQLite is enabled)
+	 */
 	query<T = any>(sql: string): Promise<T[]>;
 };
 
-// Complex type builders for full inference
-export type ExtractSchemaForSubfolder<
-	T extends readonly AdapterConfig[],
-	Subfolder extends string,
-> = T extends readonly [infer First, ...infer Rest]
-	? First extends AdapterConfig<infer S>
-		? Subfolder extends keyof S
-			? S[Subfolder]
-			: Rest extends readonly AdapterConfig[]
-				? ExtractSchemaForSubfolder<Rest, Subfolder>
-				: never
-		: never
-	: never;
+// Helper type to extract custom table methods from plugin
+type ExtractTableMethods<
+	P extends PluginConfig,
+	TName extends keyof P['tables']
+> = P['methods'] extends (...args: any[]) => infer R
+	? R extends { [K in TName]: infer M }
+		? M extends Record<string, (...args: any[]) => any>
+			? M
+			: {}
+		: {}
+	: {};
 
-// Extract methods for a specific subfolder from adapters
-// Since methods are now built dynamically, we'll type them as any for now
-// In a real implementation, we'd need more complex type inference
-export type ExtractMethodsForSubfolder<
-	T extends readonly AdapterConfig[],
-	Subfolder extends string,
-> = Record<string, (...args: any[]) => any>;
+// Helper type to extract plugin-level methods
+type ExtractPluginMethods<P extends PluginConfig> = P['methods'] extends (...args: any[]) => infer R
+	? R extends { plugin: infer M }
+		? M extends Record<string, (...args: any[]) => any>
+			? M
+			: {}
+		: {}
+	: {};
 
-export type ExtractAllSubfolders<T extends readonly AdapterConfig[]> =
-	T extends readonly [infer First, ...infer Rest]
-		? First extends AdapterConfig<infer S>
-			? Rest extends readonly AdapterConfig[]
-				? { [K in keyof S]: S[K] } | ExtractAllSubfolders<Rest>
-				: { [K in keyof S]: S[K] }
-			: never
-		: never;
+// Build the type for a single plugin in the vault
+export type BuildPluginType<P extends PluginConfig> = {
+	[TName in keyof P['tables']]: BaseTableMethods<P['tables'][TName]> & 
+		ExtractTableMethods<P, TName>;
+} & ExtractPluginMethods<P>;
 
-type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends (
-	k: infer I,
-) => void
-	? I
-	: never;
+// Build the complete vault type
+export type BuildVaultType<TPlugins extends readonly PluginConfig[]> = VaultCoreMethods & {
+	[P in TPlugins[number] as P['id']]: BuildPluginType<P>;
+};
 
-export type BuildVaultType<TAdapters extends readonly AdapterConfig[]> = {
-	[K in keyof UnionToIntersection<
-		ExtractAllSubfolders<TAdapters>
-	>]: K extends string
-		? BaseSubfolderMethods<ExtractSchemaForSubfolder<TAdapters, K>> &
-				ExtractMethodsForSubfolder<TAdapters, K>
-		: never;
-} & VaultCoreMethods;
+// Markdown record type (for storage)
+export type MarkdownRecord = {
+	id: string;
+	frontMatter: Record<string, any>;
+	content: string;
+	path: string;
+};
